@@ -1,0 +1,34 @@
+@startuml
+title DriveAdapter (Corrected)
+
+interface DriveAdapter {
+    + upload(localSrc, remoteSrc)
+    + download(localSrc, remoteSrc)
+    + delete(remoteSrc, recursive)
+    + list(remoteSrc): string[]
+}
+
+class DriveAdapterFactory {
+    {static} + getAdapter(provider: CloudProvider): DriveAdapter
+}
+
+class DriveService {
+    - adapter: DriveAdapter
+    + DriveService(adapter: DriveAdapter)
+    + upload(...)
+    + download(...)
+    + delete(...)
+    + list(...)
+}
+
+class GoogleDriveAdapterImpl
+class OneDriveAdapterImpl
+class DropBoxAdapterImpl
+
+DriveAdapter <|.. GoogleDriveAdapterImpl
+DriveAdapter <|.. OneDriveAdapterImpl
+DriveAdapter <|.. DropBoxAdapterImpl
+
+DriveAdapterFactory --> DriveAdapter : <<creates>>
+DriveService --> DriveAdapter : <<depends on>>
+@enduml
