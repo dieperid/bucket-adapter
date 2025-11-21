@@ -2,7 +2,7 @@ package com.example.bucketadapter.adapters;
 
 import java.util.List;
 
-public interface bucketadapter {
+public interface BucketAdapter {
     void upload(String localSrc, String remoteSrc);
     void download(String localSrc, String remoteSrc);
     void delete(String remoteSrc, boolean recursive);

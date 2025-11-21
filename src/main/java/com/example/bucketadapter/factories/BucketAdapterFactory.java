@@ -8,19 +8,19 @@ import com.example.bucketadapter.adapters.impl.AzureAdapterImpl;
 import com.example.bucketadapter.adapters.impl.GcpAdapterImpl;
 
 @Component
-public class bucketadapterFactory {
+public class BucketAdapterFactory {
 
     private final AwsAdapterImpl awsAdapter;
     private final AzureAdapterImpl azureAdapter;
     private final GcpAdapterImpl gcpAdapter;
 
-    public bucketadapterFactory(AwsAdapterImpl awsAdapter, AzureAdapterImpl azureAdapter, GcpAdapterImpl gcpAdapter) {
+    public BucketAdapterFactory(AwsAdapterImpl awsAdapter, AzureAdapterImpl azureAdapter, GcpAdapterImpl gcpAdapter) {
         this.awsAdapter = awsAdapter;
         this.azureAdapter = azureAdapter;
         this.gcpAdapter = gcpAdapter;
     }
 
-    public bucketadapter getAdapter(CloudProvider provider) {
+    public BucketAdapter getAdapter(CloudProvider provider) {
         return switch (provider) {
             case AWS -> awsAdapter;
             case AZURE -> azureAdapter;
