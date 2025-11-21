@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 
 import com.example.bucketadapter.factories.BucketAdapterFactory;
 import com.example.bucketadapter.models.CloudProvider;
-import com.example.bucketadapter.adapters.BucketAdapter;
 import com.example.bucketadapter.services.BucketService;
 
 @Configuration
@@ -16,9 +15,8 @@ public class BucketConfig {
     private String providerName;
 
     @Bean
-    public BucketService bucketService(bucketadapterFactory factory) {
+    public BucketService bucketService(BucketAdapterFactory factory) {
         CloudProvider provider = CloudProvider.valueOf(providerName.toUpperCase());
-        bucketadapter adapter = factory.getAdapter(provider);
-        return new BucketService(adapter);
+        return new BucketService(provider, factory);
     }
 }
