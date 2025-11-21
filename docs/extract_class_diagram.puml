@@ -1,0 +1,70 @@
+@startuml
+title BucketAdapter
+
+' =============================
+' ADAPTER INTERFACE (TARGET)
+' =============================
+interface BucketAdapter {
+    + upload(localSrc: string, remoteSrc: string): void
+    + download(localSrc: string, remoteSrc: string): void
+    + delete(remoteSrc: string, recursive: boolean): void
+    + list(remoteSrc: string): string[]
+}
+
+' =============================
+' STATIC FACTORY
+' =============================
+class BucketAdapterFactory {
+    {static} + getAdapter(provider: CloudProvider): BucketAdapter
+}
+
+' =============================
+' SERVICE LAYER
+' =============================
+class BucketService {
+    - adapter: BucketAdapter
+    + BucketService(provider: CloudProvider)
+    + upload(...)
+    + download(...)
+    + delete(...)
+    + list(...)
+}
+
+' =============================
+' IMPLEMENTATIONS
+' =============================
+
+class AWSAdapterImpl {
+}
+
+class AzureAdapterImpl {
+}
+
+class GCPAdapterImpl {
+
+}
+
+' =============================
+' SDK CLIENTS
+' =============================
+class AWSSDK
+class AZURESDK
+class GCPSDK
+
+' =============================
+' RELATIONS
+' =============================
+
+BucketAdapter <|.. AWSAdapterImpl
+BucketAdapter <|.. AzureAdapterImpl
+BucketAdapter <|.. GCPAdapterImpl
+
+BucketAdapterFactory --> BucketAdapter : <<creates>>
+
+BucketService --> BucketAdapterFactory : uses
+
+AWSAdapterImpl --> AWSSDK : uses
+AzureAdapterImpl --> AZURESDK : uses
+GCPAdapterImpl --> GCPSDK : uses
+
+@enduml
