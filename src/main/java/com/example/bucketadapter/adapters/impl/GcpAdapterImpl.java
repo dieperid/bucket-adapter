@@ -1,12 +1,12 @@
 package com.example.bucketadapter.adapters.impl;
 
 import org.springframework.stereotype.Component;
-import com.example.bucketadapter.adapters.bucketadapter;
+import com.example.bucketadapter.adapters.BucketAdapter;
 import com.example.bucketadapter.providers.GCPSDK;
 import java.util.List;
 
 @Component
-public class GcpAdapterImpl implements bucketadapter {
+public class GcpAdapterImpl implements BucketAdapter {
 
     private final GCPSDK gcpSdk;
 

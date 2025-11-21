@@ -2,7 +2,7 @@ package com.example.bucketadapter.factories;
 
 import org.springframework.stereotype.Component;
 import com.example.bucketadapter.models.CloudProvider;
-import com.example.bucketadapter.adapters.bucketadapter;
+import com.example.bucketadapter.adapters.BucketAdapter;
 import com.example.bucketadapter.adapters.impl.AwsAdapterImpl;
 import com.example.bucketadapter.adapters.impl.AzureAdapterImpl;
 import com.example.bucketadapter.adapters.impl.GcpAdapterImpl;

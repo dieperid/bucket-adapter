@@ -4,9 +4,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.example.bucketadapter.factories.bucketadapterFactory;
+import com.example.bucketadapter.factories.BucketAdapterFactory;
 import com.example.bucketadapter.models.CloudProvider;
-import com.example.bucketadapter.adapter.bucketadapter;
+import com.example.bucketadapter.adapters.BucketAdapter;
 import com.example.bucketadapter.services.BucketService;
 
 @Configuration
