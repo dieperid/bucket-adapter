@@ -1,12 +1,12 @@
-package com.example.bucketAdapter.adapters.impl;
+package com.example.bucketadapter.adapters.impl;
 
 import org.springframework.stereotype.Component;
-import com.example.bucketAdapter.adapters.BucketAdapter;
-import com.example.bucketAdapter.providers.AWSSDK;
+import com.example.bucketadapter.adapters.bucketadapter;
+import com.example.bucketadapter.providers.AWSSDK;
 import java.util.List;
 
 @Component
-public class AwsAdapterImpl implements BucketAdapter {
+public class AwsAdapterImpl implements bucketadapter {
 
     private final AWSSDK awsSDK;
 

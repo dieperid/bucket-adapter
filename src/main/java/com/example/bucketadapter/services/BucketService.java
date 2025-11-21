@@ -1,15 +1,15 @@
-package com.example.bucketAdapter.services;
+package com.example.bucketadapter.services;
 
 import org.springframework.stereotype.Service;
-import com.example.bucketAdapter.adapters.BucketAdapter;
+import com.example.bucketadapter.adapters.bucketadapter;
 import java.util.List;
 
 @Service
 public class BucketService {
 
-    private final BucketAdapter adapter;
+    private final bucketadapter adapter;
 
-    public BucketService(CloudProvider provider, BucketAdapterFactory factory) {
+    public BucketService(CloudProvider provider, bucketadapterFactory factory) {
         this.adapter = factory.getAdapter(provider);
     }
 

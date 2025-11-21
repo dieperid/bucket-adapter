@@ -1,9 +1,9 @@
-package com.example.bucketAdapter.providers;
+package com.example.bucketadapter.providers;
 
 import org.springframework.stereotype.Component;
 
 @Component
-public class AZURESDK {
+public class GCPSDK {
     public void putObject(String src, String dest) {}
     public void getObject(String src, String dest) {}
     public void deleteObject(String src) {}

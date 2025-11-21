@@ -1,12 +1,12 @@
-package com.example.bucketAdapter.adapters.impl;
+package com.example.bucketadapter.adapters.impl;
 
 import org.springframework.stereotype.Component;
-import com.example.bucketAdapter.adapters.BucketAdapter;
-import com.example.bucketAdapter.providers.AZURESDK;
+import com.example.bucketadapter.adapters.bucketadapter;
+import com.example.bucketadapter.providers.AZURESDK;
 import java.util.List;
 
 @Component
-public class AzureAdapterImpl implements BucketAdapter {
+public class AzureAdapterImpl implements bucketadapter {
 
     private final AZURESDK azureSdk;
 

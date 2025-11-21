@@ -1,4 +1,4 @@
-package com.example.bucketAdapter.providers;
+package com.example.bucketadapter.providers;
 
 import org.springframework.stereotype.Component;
 

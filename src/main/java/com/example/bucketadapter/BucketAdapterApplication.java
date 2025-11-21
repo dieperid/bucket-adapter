@@ -1,13 +1,13 @@
-package com.example.bucketAdapter;
+package com.example.bucketadapter;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class BucketAdapterApplication {
+public class bucketadapterApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(BucketAdapterApplication.class, args);
+		SpringApplication.run(bucketadapterApplication.class, args);
 	}
 
 }

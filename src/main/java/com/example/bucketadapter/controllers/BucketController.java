@@ -1,4 +1,4 @@
-package com.example.bucketAdapter.controllers;
+package com.example.bucketadapter.controllers;
 
 import org.springframework.web.bind.annotation.*;
 import java.util.*;

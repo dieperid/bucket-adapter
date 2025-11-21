@@ -1,13 +1,13 @@
-package com.example.bucketAdapter.config;
+package com.example.bucketadapter.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.example.bucketAdapter.factories.BucketAdapterFactory;
-import com.example.bucketAdapter.models.CloudProvider;
-import com.example.bucketAdapter.adapter.BucketAdapter;
-import com.example.bucketAdapter.services.BucketService;
+import com.example.bucketadapter.factories.bucketadapterFactory;
+import com.example.bucketadapter.models.CloudProvider;
+import com.example.bucketadapter.adapter.bucketadapter;
+import com.example.bucketadapter.services.BucketService;
 
 @Configuration
 public class BucketConfig {
@@ -16,9 +16,9 @@ public class BucketConfig {
     private String providerName;
 
     @Bean
-    public BucketService bucketService(BucketAdapterFactory factory) {
+    public BucketService bucketService(bucketadapterFactory factory) {
         CloudProvider provider = CloudProvider.valueOf(providerName.toUpperCase());
-        BucketAdapter adapter = factory.getAdapter(provider);
+        bucketadapter adapter = factory.getAdapter(provider);
         return new BucketService(adapter);
     }
 }
