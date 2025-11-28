@@ -4,7 +4,6 @@ import org.springframework.stereotype.Service;
 import com.example.bucketadapter.adapters.BucketAdapter;
 import com.example.bucketadapter.factories.BucketAdapterFactory;
 import com.example.bucketadapter.models.CloudProvider;
-import com.example.bucketadapter.controllers.BucketController;
 import java.util.List;
 
 @Service
