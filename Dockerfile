@@ -1,5 +1,5 @@
 # Étape 1 : Build avec Maven wrapper
-FROM eclipse-temurin:25-jdk AS build
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
 # Copier Maven wrapper
@@ -14,6 +14,7 @@ RUN chmod +x mvnw && ./mvnw dependency:go-offline
 COPY src ./src
 
 # Build Spring Boot
+RUN ./mvnw clean test
 RUN ./mvnw clean package -DskipTests
 
 # Étape 2 : Image finale pour dev
