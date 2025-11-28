@@ -74,3 +74,6 @@ buildNumber.properties
 ### VS Code ###
 .vscode/
 .env
+
+### Doxygen ###
+docs/html
