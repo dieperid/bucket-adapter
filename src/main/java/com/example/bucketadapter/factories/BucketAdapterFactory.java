@@ -10,21 +10,17 @@ import com.example.bucketadapter.adapters.impl.GcpAdapterImpl;
 @Component
 public class BucketAdapterFactory {
 
-    private final AwsAdapterImpl awsAdapter;
-    private final AzureAdapterImpl azureAdapter;
-    private final GcpAdapterImpl gcpAdapter;
+    private final ApplicationContext context;
 
-    public BucketAdapterFactory(AwsAdapterImpl awsAdapter, AzureAdapterImpl azureAdapter, GcpAdapterImpl gcpAdapter) {
-        this.awsAdapter = awsAdapter;
-        this.azureAdapter = azureAdapter;
-        this.gcpAdapter = gcpAdapter;
+    public BucketAdapterFactory(ApplicationContext context) {
+        this.context = context;
     }
 
     public BucketAdapter getAdapter(CloudProvider provider) {
         return switch (provider) {
-            case AWS -> awsAdapter;
-            case AZURE -> azureAdapter;
-            case GCP -> gcpAdapter;
+            case AWS -> context.getBean(AwsAdapterImpl.class);
+            case AZURE -> context.getBean(AzureAdapterImpl.class);
+            case GCP -> context.getBean(GcpAdapterImpl.class);
         };
     }
 }
