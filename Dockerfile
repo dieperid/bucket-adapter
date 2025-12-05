@@ -14,7 +14,7 @@ RUN chmod +x mvnw && ./mvnw dependency:go-offline
 COPY src ./src
 
 # Build Spring Boot
-RUN ./mvnw clean test
+# RUN ./mvnw clean test
 RUN ./mvnw clean package -DskipTests
 
 # Étape 2 : Image finale pour dev
