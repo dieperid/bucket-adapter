@@ -1,5 +1,6 @@
 package com.example.bucketadapter.factories;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import com.example.bucketadapter.models.CloudProvider;
 import com.example.bucketadapter.adapters.BucketAdapter;
