@@ -15,6 +15,11 @@ public class BucketController {
         this.bucketService = bucketService;
     }
 
+    /*
+     * CURL sample :
+     * 
+     * curl -s "http://localhost:8080/bucket/list?path=remote/"
+     */
     @GetMapping("/list")
     public List<String> list(@RequestParam String path) {
         return bucketService.list(path);
