@@ -31,6 +31,7 @@ class AwsAdapterImplTest {
 
     private AwsAdapterImpl awsAdapter;
 
+    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -54,7 +55,6 @@ class AwsAdapterImplTest {
         // Mock getObject de façon type-safe
         Path fakePath = Paths.get("local.txt");
 
-        @SuppressWarnings("unchecked")
         Answer<Path> getObjectAnswer = invocation -> fakePath;
         doAnswer(getObjectAnswer)
                 .when(s3ClientSpy)
