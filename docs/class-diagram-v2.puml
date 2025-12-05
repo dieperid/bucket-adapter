@@ -1,34 +1,34 @@
 @startuml
-title DriveAdapter (Corrected)
+title BucketAdapter (Corrected)
 
-interface DriveAdapter {
+interface BucketAdapter {
     + upload(localSrc, remoteSrc)
     + download(localSrc, remoteSrc)
     + delete(remoteSrc, recursive)
     + list(remoteSrc): string[]
 }
 
-class DriveAdapterFactory {
-    {static} + getAdapter(provider: CloudProvider): DriveAdapter
+class BucketAdapterFactory {
+    + getAdapter(provider: CloudProvider): BucketAdapter
 }
 
-class DriveService {
-    - adapter: DriveAdapter
-    + DriveService(adapter: DriveAdapter)
+class BucketService {
+    - adapter: BucketAdapter
+    + BucketService(adapter: BucketAdapter)
     + upload(...)
     + download(...)
     + delete(...)
     + list(...)
 }
 
-class GoogleDriveAdapterImpl
-class OneDriveAdapterImpl
-class DropBoxAdapterImpl
+class AzureAdapterImpl
+class AwsAdapterImpl
+class GcpAdapterImpl
 
-DriveAdapter <|.. GoogleDriveAdapterImpl
-DriveAdapter <|.. OneDriveAdapterImpl
-DriveAdapter <|.. DropBoxAdapterImpl
+BucketAdapter <|.. AzureAdapterImpl
+BucketAdapter <|.. AwsAdapterImpl
+BucketAdapter <|.. GcpAdapterImpl
 
-DriveAdapterFactory --> DriveAdapter : <<creates>>
-DriveService --> DriveAdapter : <<depends on>>
+BucketAdapterFactory --> BucketAdapter : <<creates>>
+BucketService --> BucketAdapter : <<depends on>>
 @enduml
