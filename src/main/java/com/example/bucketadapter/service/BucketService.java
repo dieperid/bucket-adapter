@@ -1,7 +1,9 @@
-package com.example.bucketadapter.services;
+package com.example.bucketadapter.service;
 
 import org.springframework.stereotype.Service;
-import com.example.bucketadapter.adapters.BucketAdapter;
+
+import com.example.bucketadapter.adapter.BucketAdapter;
+
 import java.util.List;
 
 @Service

@@ -1,4 +1,4 @@
-package com.example.bucketadapter.models;
+package com.example.bucketadapter.model;
 
 public enum CloudProvider {
     AWS, AZURE, GCP;

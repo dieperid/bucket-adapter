@@ -1,12 +1,13 @@
-package com.example.bucketadapter.factories;
+package com.example.bucketadapter.factory;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-import com.example.bucketadapter.models.CloudProvider;
-import com.example.bucketadapter.adapters.BucketAdapter;
-import com.example.bucketadapter.adapters.impl.AwsAdapterImpl;
-import com.example.bucketadapter.adapters.impl.AzureAdapterImpl;
-import com.example.bucketadapter.adapters.impl.GcpAdapterImpl;
+
+import com.example.bucketadapter.adapter.BucketAdapter;
+import com.example.bucketadapter.adapter.impl.AwsAdapterImpl;
+import com.example.bucketadapter.adapter.impl.AzureAdapterImpl;
+import com.example.bucketadapter.adapter.impl.GcpAdapterImpl;
+import com.example.bucketadapter.model.CloudProvider;
 
 @Component
 public class BucketAdapterFactory {

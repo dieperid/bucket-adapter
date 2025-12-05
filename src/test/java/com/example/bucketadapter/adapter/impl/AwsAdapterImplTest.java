@@ -1,4 +1,4 @@
-package com.example.bucketadapter.adapters.impl;
+package com.example.bucketadapter.adapter.impl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

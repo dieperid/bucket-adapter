@@ -1,7 +1,8 @@
-package com.example.bucketadapter.adapters.impl;
+package com.example.bucketadapter.adapter.impl;
 
 import org.springframework.stereotype.Component;
-import com.example.bucketadapter.adapters.BucketAdapter;
+
+import com.example.bucketadapter.adapter.BucketAdapter;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;

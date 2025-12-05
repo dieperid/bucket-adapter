@@ -1,8 +1,10 @@
-package com.example.bucketadapter.adapters.impl;
+package com.example.bucketadapter.adapter.impl;
 
 import org.springframework.stereotype.Component;
-import com.example.bucketadapter.adapters.BucketAdapter;
-import com.example.bucketadapter.providers.AZURESDK;
+
+import com.example.bucketadapter.adapter.BucketAdapter;
+import com.example.bucketadapter.provider.AZURESDK;
+
 import java.util.List;
 
 @Component

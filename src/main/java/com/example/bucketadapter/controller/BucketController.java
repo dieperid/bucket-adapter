@@ -1,9 +1,10 @@
-package com.example.bucketadapter.controllers;
+package com.example.bucketadapter.controller;
 
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
 
-import com.example.bucketadapter.services.BucketService;
+import com.example.bucketadapter.service.BucketService;
+
+import java.util.*;
 
 @RestController
 @RequestMapping("/bucket")
