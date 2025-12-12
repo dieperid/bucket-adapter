@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Spy;
 import org.mockito.stubbing.Answer;
-import org.mockito.ArgumentMatchers;
 import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
@@ -85,7 +84,7 @@ class AwsAdapterImplTest {
 
         verify(s3ClientSpy).getObject(
                 any(GetObjectRequest.class),
-                ArgumentMatchers.<ResponseTransformer<GetObjectResponse, Path>>any());
+                any(Path.class));
     }
 
     @Test
