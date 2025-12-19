@@ -10,4 +10,8 @@ public interface BucketAdapter {
     void delete(String remoteSrc, boolean recursive);
 
     List<String> list(String remoteSrc);
+
+    boolean doesExists(String remoteSrc);
+
+    String share(String remoteSrc, int expirationTime);
 }

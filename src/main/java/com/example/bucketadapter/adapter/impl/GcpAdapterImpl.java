@@ -35,4 +35,16 @@ public class GcpAdapterImpl implements BucketAdapter {
     public List<String> list(String remoteSrc) {
         return gcpSdk.listObjects(remoteSrc);
     }
+
+    @Override
+    public boolean doesExists(String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'doesExists'");
+    }
+
+    @Override
+    public String share(String remoteSrc, int expirationTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'share'");
+    }
 }

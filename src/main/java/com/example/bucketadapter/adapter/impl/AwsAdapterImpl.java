@@ -90,6 +90,18 @@ public class AwsAdapterImpl implements BucketAdapter {
                 .build();
     }
 
+    @Override
+    public boolean doesExists(String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'doesExists'");
+    }
+
+    @Override
+    public String share(String remoteSrc, int expirationTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'share'");
+    }
+
     /**
      * Resolve S3 bucket name from system property or environment variable.
      * 
@@ -137,4 +149,5 @@ public class AwsAdapterImpl implements BucketAdapter {
         }
         return value;
     }
+
 }
