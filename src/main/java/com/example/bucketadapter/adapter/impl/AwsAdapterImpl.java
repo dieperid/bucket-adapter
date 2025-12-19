@@ -97,7 +97,6 @@ public class AwsAdapterImpl implements BucketAdapter {
      */
     private static String resolveBucketName() {
         return getConfig(
-                "aws.bucket.name",
                 "AWS_BUCKET_NAME",
                 "S3 bucket name");
     }
@@ -109,7 +108,6 @@ public class AwsAdapterImpl implements BucketAdapter {
      */
     private static String resolveRegion() {
         return getConfig(
-                "aws.region",
                 "AWS_REGION",
                 "S3 region");
     }
@@ -118,12 +116,11 @@ public class AwsAdapterImpl implements BucketAdapter {
      * Utility method to get configuration from system property or environment
      * variable.
      * 
-     * @param systemProperty - system property name
-     * @param envVar         - environment variable name
-     * @param configName     - configuration descriptive name
+     * @param envVar     - environment variable name
+     * @param configName - configuration descriptive name
      * @return configuration value
      */
-    private static String getConfig(String systemProperty, String envVar, String configName) {
+    private static String getConfig(String envVar, String configName) {
         // 1. FIRST: Check Docker/container environment variables (highest priority)
         String value = System.getenv(envVar);
 
