@@ -7,7 +7,7 @@ import com.example.bucketadapter.service.BucketService;
 import java.util.*;
 
 @RestController
-@RequestMapping("/bucket")
+@RequestMapping("/api")
 public class BucketController {
 
     private final BucketService bucketService;
@@ -19,7 +19,7 @@ public class BucketController {
     /*
      * CURL sample :
      * 
-     * curl -s "http://localhost:8080/bucket/list?path=remote/"
+     * curl -s "http://localhost:8080/api/list?path="
      */
     @GetMapping("/list")
     public List<String> list(@RequestParam String path) {
