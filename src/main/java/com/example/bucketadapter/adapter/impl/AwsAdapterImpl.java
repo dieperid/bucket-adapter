@@ -15,7 +15,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component
+@Component("AWS")
 public class AwsAdapterImpl implements BucketAdapter {
 
     private final S3Client s3Client;
@@ -97,8 +97,8 @@ public class AwsAdapterImpl implements BucketAdapter {
      */
     private static String resolveBucketName() {
         return getConfig(
-                "aws.s3.bucket.name",
-                "AWS_S3_BUCKET_NAME",
+                "aws.bucket.name",
+                "AWS_BUCKET_NAME",
                 "S3 bucket name");
     }
 
@@ -109,8 +109,8 @@ public class AwsAdapterImpl implements BucketAdapter {
      */
     private static String resolveRegion() {
         return getConfig(
-                "aws.s3.region",
-                "AWS_S3_REGION",
+                "aws.region",
+                "AWS_REGION",
                 "S3 region");
     }
 
@@ -124,14 +124,19 @@ public class AwsAdapterImpl implements BucketAdapter {
      * @return configuration value
      */
     private static String getConfig(String systemProperty, String envVar, String configName) {
-        String value = System.getProperty(systemProperty);
+        // 1. FIRST: Check Docker/container environment variables (highest priority)
+        String value = System.getenv(envVar);
+
+        // 2. SECOND: Check system properties (set by EnvConfig from .env)
         if (value == null || value.isBlank()) {
-            value = System.getenv(envVar);
+            value = System.getProperty(envVar); // AWS_BUCKET_NAME
         }
+
         if (value == null || value.isBlank()) {
             throw new IllegalStateException(
-                    configName + " is not configured. Set " + systemProperty +
-                            " property or " + envVar + " env variable.");
+                    configName + " is not configured.\n" +
+                            "When running locally: Add to .env file as " + envVar + "=value\n" +
+                            "When running in Docker: Set environment variable " + envVar);
         }
         return value;
     }
