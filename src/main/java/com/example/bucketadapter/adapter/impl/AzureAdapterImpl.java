@@ -7,7 +7,7 @@ import com.example.bucketadapter.provider.AZURESDK;
 
 import java.util.List;
 
-@Component
+@Component("AZURE")
 public class AzureAdapterImpl implements BucketAdapter {
 
     private final AZURESDK azureSdk;

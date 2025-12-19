@@ -7,7 +7,7 @@ import com.example.bucketadapter.provider.GCPSDK;
 
 import java.util.List;
 
-@Component
+@Component("GCP")
 public class GcpAdapterImpl implements BucketAdapter {
 
     private final GCPSDK gcpSdk;

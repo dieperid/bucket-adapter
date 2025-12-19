@@ -15,17 +15,27 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component
+@Component("AWS")
 public class AwsAdapterImpl implements BucketAdapter {
 
     private final S3Client s3Client;
-    private final String bucket = "my-bucket";
+    private final String bucket;
 
     public AwsAdapterImpl() {
-        this.s3Client = S3Client.builder()
-                .region(Region.EU_WEST_1)
-                .credentialsProvider(DefaultCredentialsProvider.builder().build())
-                .build();
+        this(
+                createS3Client(),
+                resolveBucketName());
+    }
+
+    /**
+     * Constructor with parameters for testing purposes.
+     * 
+     * @param s3Client - S3 client
+     * @param bucket   - S3 bucket name
+     */
+    AwsAdapterImpl(S3Client s3Client, String bucket) {
+        this.s3Client = s3Client;
+        this.bucket = bucket;
     }
 
     @Override
@@ -64,5 +74,67 @@ public class AwsAdapterImpl implements BucketAdapter {
         return response.contents().stream()
                 .map(S3Object::key)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Create S3 client with resolved region and default credentials provider.
+     * 
+     * @return S3 client
+     */
+    private static S3Client createS3Client() {
+        String region = resolveRegion();
+
+        return S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                .build();
+    }
+
+    /**
+     * Resolve S3 bucket name from system property or environment variable.
+     * 
+     * @return S3 bucket name
+     */
+    private static String resolveBucketName() {
+        return getConfig(
+                "AWS_BUCKET_NAME",
+                "S3 bucket name");
+    }
+
+    /**
+     * Resolve AWS S3 region from system property or environment variable.
+     * 
+     * @return AWS S3 region
+     */
+    private static String resolveRegion() {
+        return getConfig(
+                "AWS_REGION",
+                "S3 region");
+    }
+
+    /**
+     * Utility method to get configuration from system property or environment
+     * variable.
+     * 
+     * @param envVar     - environment variable name
+     * @param configName - configuration descriptive name
+     * @return configuration value
+     */
+    private static String getConfig(String envVar, String configName) {
+        // 1. FIRST: Check Docker/container environment variables (highest priority)
+        String value = System.getenv(envVar);
+
+        // 2. SECOND: Check system properties (set by EnvConfig from .env)
+        if (value == null || value.isBlank()) {
+            value = System.getProperty(envVar); // AWS_BUCKET_NAME
+        }
+
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    configName + " is not configured.\n" +
+                            "When running locally: Add to .env file as " + envVar + "=value\n" +
+                            "When running in Docker: Set environment variable " + envVar);
+        }
+        return value;
     }
 }

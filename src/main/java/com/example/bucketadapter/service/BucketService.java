@@ -3,6 +3,7 @@ package com.example.bucketadapter.service;
 import org.springframework.stereotype.Service;
 
 import com.example.bucketadapter.adapter.BucketAdapter;
+import com.example.bucketadapter.factory.BucketAdapterFactory;
 
 import java.util.List;
 
@@ -11,8 +12,8 @@ public class BucketService {
 
     private final BucketAdapter adapter;
 
-    public BucketService(BucketAdapter adapter) {
-        this.adapter = adapter;
+    public BucketService(BucketAdapterFactory factory) {
+        this.adapter = factory.getAdapter();
     }
 
     public void upload(String local, String remote) {
