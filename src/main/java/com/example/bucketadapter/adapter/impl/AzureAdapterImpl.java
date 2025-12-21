@@ -27,6 +27,12 @@ public class AzureAdapterImpl implements BucketAdapter {
     }
 
     @Override
+    public void update(String localSrc, String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
+    }
+
+    @Override
     public void delete(String remoteSrc, boolean recursive) {
         azureSdk.deleteObject(remoteSrc);
     }
@@ -34,5 +40,17 @@ public class AzureAdapterImpl implements BucketAdapter {
     @Override
     public List<String> list(String remoteSrc) {
         return azureSdk.listObjects(remoteSrc);
+    }
+
+    @Override
+    public boolean doesExists(String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'doesExists'");
+    }
+
+    @Override
+    public String share(String remoteSrc, int expirationTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'share'");
     }
 }
