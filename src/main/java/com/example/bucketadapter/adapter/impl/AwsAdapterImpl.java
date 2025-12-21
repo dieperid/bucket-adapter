@@ -57,6 +57,12 @@ public class AwsAdapterImpl implements BucketAdapter {
     }
 
     @Override
+    public void update(String localSrc, String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
+    }
+
+    @Override
     public void delete(String remoteSrc, boolean recursive) {
         s3Client.deleteObject(DeleteObjectRequest.builder()
                 .bucket(bucket)
@@ -76,6 +82,18 @@ public class AwsAdapterImpl implements BucketAdapter {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public boolean doesExists(String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'doesExists'");
+    }
+
+    @Override
+    public String share(String remoteSrc, int expirationTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'share'");
+    }
+
     /**
      * Create S3 client with resolved region and default credentials provider.
      * 
@@ -88,18 +106,6 @@ public class AwsAdapterImpl implements BucketAdapter {
                 .region(Region.of(region))
                 .credentialsProvider(DefaultCredentialsProvider.builder().build())
                 .build();
-    }
-
-    @Override
-    public boolean doesExists(String remoteSrc) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'doesExists'");
-    }
-
-    @Override
-    public String share(String remoteSrc, int expirationTime) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'share'");
     }
 
     /**
@@ -149,5 +155,4 @@ public class AwsAdapterImpl implements BucketAdapter {
         }
         return value;
     }
-
 }

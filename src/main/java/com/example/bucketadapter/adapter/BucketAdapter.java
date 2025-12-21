@@ -7,6 +7,8 @@ public interface BucketAdapter {
 
     void download(String localSrc, String remoteSrc);
 
+    void update(String localSrc, String remoteSrc);
+
     void delete(String remoteSrc, boolean recursive);
 
     List<String> list(String remoteSrc);

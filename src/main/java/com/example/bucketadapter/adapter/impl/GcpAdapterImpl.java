@@ -27,6 +27,12 @@ public class GcpAdapterImpl implements BucketAdapter {
     }
 
     @Override
+    public void update(String localSrc, String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
+    }
+
+    @Override
     public void delete(String remoteSrc, boolean recursive) {
         gcpSdk.deleteObject(remoteSrc);
     }

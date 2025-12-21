@@ -27,6 +27,12 @@ public class AzureAdapterImpl implements BucketAdapter {
     }
 
     @Override
+    public void update(String localSrc, String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
+    }
+
+    @Override
     public void delete(String remoteSrc, boolean recursive) {
         azureSdk.deleteObject(remoteSrc);
     }
