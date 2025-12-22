@@ -1,6 +1,7 @@
 package com.example.bucketadapter.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.bucketadapter.service.BucketService;
@@ -22,7 +23,7 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -s
-     * "http://localhost:8080/api/upload?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
+     * "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
      * 
      * @param localPath - path to the local file
      * @param remoteSrc - path in the bucket
@@ -38,12 +39,12 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -s
-     * "http://localhost:8080/api/download?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
+     * "http://localhost:8080/api/files/download?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
      * 
      * @param localPath - path to the local file
      * @param remoteSrc - path in the bucket
      */
-    @GetMapping(value = "/files", params = "remoteSrc")
+    @GetMapping(value = "/files/download", params = "remoteSrc")
     @ResponseStatus(HttpStatus.OK)
     public void download(@RequestParam String localPath, @RequestParam String remoteSrc) {
         bucketService.download(localPath, remoteSrc);
@@ -100,14 +101,16 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -s
-     * "http://localhost:8080/api/files?remoteSrc=/path/in/bucket/file.txt"
+     * "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt"
      *
      * @param remoteSrc - path in the bucket
      * @return - true if the file exists, false otherwise
      */
-    @RequestMapping(value = "/files", method = RequestMethod.HEAD, params = "remoteSrc")
-    public boolean doesExists(@RequestParam String remoteSrc) {
-        return bucketService.doesExists(remoteSrc);
+    @GetMapping(value = "/files/exists", params = "remoteSrc")
+    public ResponseEntity<Void> doesExists(@RequestParam String remoteSrc) {
+        return bucketService.doesExists(remoteSrc)
+                ? ResponseEntity.ok().build()
+                : ResponseEntity.notFound().build();
     }
 
     /**
