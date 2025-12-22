@@ -31,7 +31,7 @@ This file is used to document the API. It describes the available endpoints, how
 | Update   | `curl -X PUT "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt" `  |
 | Delete   | `curl -X DELETE "http://localhost:8080/api/files?remoteSrc=/path/in/bucket/file.txt&recursive=false" `                 |
 | List     | `curl -X GET "http://localhost:8080/api/files?path=/path/in/bucket" `                                                  |
-| Exists   | `curl -I -X HEAD "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt" `                                |
+| Exists   | `curl -X GET "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt" `                                |
 | Share    | `curl -X POST "http://localhost:8080/api/files/share?remoteSrc=/path/in/bucket/file.txt&expirationTime=3600" `         |
 
 ### Notes
