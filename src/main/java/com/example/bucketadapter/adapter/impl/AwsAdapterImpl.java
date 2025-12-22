@@ -112,10 +112,13 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .key(remoteSrc)
                     .build());
             return true;
-        } catch (NoSuchKeyException e) {
-            return false;
+
         } catch (S3Exception e) {
-            throw new RuntimeException("Error checking existence of " + remoteSrc, e);
+            if (e.statusCode() == 404) {
+                return false;
+            }
+            throw new RuntimeException(
+                    "Error checking existence of " + remoteSrc, e);
         }
     }
 
