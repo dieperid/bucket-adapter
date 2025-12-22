@@ -1,5 +1,6 @@
 package com.example.bucketadapter.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.bucketadapter.service.BucketService;
@@ -27,6 +28,7 @@ public class BucketController {
      * @param remoteSrc - path in the bucket
      */
     @PostMapping("/files")
+    @ResponseStatus(HttpStatus.CREATED)
     public void upload(@RequestParam String localPath, @RequestParam String remoteSrc) {
         bucketService.upload(localPath, remoteSrc);
     }
@@ -41,7 +43,8 @@ public class BucketController {
      * @param localPath - path to the local file
      * @param remoteSrc - path in the bucket
      */
-    @GetMapping("/files")
+    @GetMapping(value = "/files", params = "remoteSrc")
+    @ResponseStatus(HttpStatus.OK)
     public void download(@RequestParam String localPath, @RequestParam String remoteSrc) {
         bucketService.download(localPath, remoteSrc);
     }
@@ -56,7 +59,8 @@ public class BucketController {
      * @param localPath - path to the local file
      * @param remoteSrc - path in the bucket
      */
-    @PutMapping("/files")
+    @PutMapping(value = "/files", params = "remoteSrc")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void update(@RequestParam String localPath, @RequestParam String remoteSrc) {
         bucketService.update(localPath, remoteSrc);
     }
@@ -71,7 +75,8 @@ public class BucketController {
      * @param remoteSrc - path in the bucket
      * @param recursive - whether to delete recursively
      */
-    @DeleteMapping("/files")
+    @DeleteMapping(value = "/files", params = "remoteSrc")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@RequestParam String remoteSrc, @RequestParam(defaultValue = "false") boolean recursive) {
         bucketService.delete(remoteSrc, recursive);
     }
@@ -85,7 +90,7 @@ public class BucketController {
      * @param path - directory path in the bucket
      * @return - list of file paths
      */
-    @GetMapping("/files")
+    @GetMapping(value = "/files", params = "path")
     public List<String> list(@RequestParam String path) {
         return bucketService.list(path);
     }
@@ -100,7 +105,7 @@ public class BucketController {
      * @param remoteSrc - path in the bucket
      * @return - true if the file exists, false otherwise
      */
-    @RequestMapping("/files")
+    @RequestMapping(value = "/files", method = RequestMethod.HEAD, params = "remoteSrc")
     public boolean doesExists(@RequestParam String remoteSrc) {
         return bucketService.doesExists(remoteSrc);
     }
