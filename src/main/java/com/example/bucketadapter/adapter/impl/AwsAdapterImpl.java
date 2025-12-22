@@ -58,8 +58,22 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void update(String localSrc, String remoteSrc) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'update'");
+        // First, check if the object exists
+        try {
+            s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build());
+        } catch (S3Exception e) {
+            throw new IllegalArgumentException("Cannot update: file does not exist in S3: " + remoteSrc, e);
+        }
+
+        // Replace the existing object
+        s3Client.putObject(PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(remoteSrc)
+                .build(),
+                RequestBody.fromFile(new File(localSrc)));
     }
 
     @Override
