@@ -10,6 +10,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./pom.xml:/app/pom.xml
+      - ./data:/app/data
     env_file:
       - .env
     environment:

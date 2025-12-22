@@ -1,5 +1,19 @@
 # Bucket Adapter Repository
 
+## Generate "data" folder for testing
+
+1. Make the script executable :
+
+```bash
+chmod +x setup-test-data.sh
+```
+
+2. Execute the script to create the **data** folder with sample files for testing :
+
+```
+./setup-test-data.sh
+```
+
 ## Run l'application
 
 ### Maven
