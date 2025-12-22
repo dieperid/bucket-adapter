@@ -7,11 +7,11 @@ This file is used to document the API. It describes the available endpoints, how
 | Action   | HTTP Method | Endpoint           | Parameters                                               | Description                                   | HTTP Status                                 |
 | -------- | ----------- | ------------------ | -------------------------------------------------------- | --------------------------------------------- | ------------------------------------------- |
 | Upload   | POST        | `/api/files`       | `localPath` (String), `remoteSrc` (String)               | Upload a local file to the bucket             | 201 Created                                 |
-| Download | GET         | `/api/files`       | `localPath` (String), `remoteSrc` (String)               | Download a file from the bucket to the server | 200 OK                                      |
+| Download | GET         | `/api/files/download`       | `localPath` (String), `remoteSrc` (String)               | Download a file from the bucket to the server | 200 OK                                      |
 | Update   | PUT         | `/api/files`       | `localPath` (String), `remoteSrc` (String)               | Replace an existing file in the bucket        | 204 No Content                              |
 | Delete   | DELETE      | `/api/files`       | `remoteSrc` (String), `recursive` (boolean, optional)    | Delete a file or folder from the bucket       | 204 No Content                              |
 | List     | GET         | `/api/files`       | `path` (String)                                          | List all files in a directory in the bucket   | 200 OK                                      |
-| Exists   | HEAD        | `/api/files`       | `remoteSrc` (String)                                     | Check if a file exists in the bucket          | 200 OK if exists / 404 Not Found if missing |
+| Exists   | HEAD        | `/api/files/exists`       | `remoteSrc` (String)                                     | Check if a file exists in the bucket          | 200 OK if exists / 404 Not Found if missing |
 | Share    | POST        | `/api/files/share` | `remoteSrc` (String), `expirationTime` (int, in seconds) | Generate a shared link for a file             | 200 OK                                      |
 
 ### Notes
@@ -19,7 +19,7 @@ This file is used to document the API. It describes the available endpoints, how
 1. `remoteSrc`: Logical identifier of the file in the bucket
 2. `localPath`: Local path on the server used for upload/download
 3. **HEAD** for `Exists` returns only the HTTP status, no response body
-4. All endpoints are prefixed with `/api`
+4. All endpoints are prefixed with `/api/files`
 5. `/files` is treated as a REST resource — no verbs in the URL
 
 ## How to use them ?
@@ -27,11 +27,11 @@ This file is used to document the API. It describes the available endpoints, how
 | Action       | cURL Example                                                                                                                |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | Upload   | `curl -X POST "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt" ` |
-| Download | `curl -X GET "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt" `  |
+| Download | `curl -X GET "http://localhost:8080/api/files/download?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt" `  |
 | Update   | `curl -X PUT "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt" `  |
 | Delete   | `curl -X DELETE "http://localhost:8080/api/files?remoteSrc=/path/in/bucket/file.txt&recursive=false" `                 |
 | List     | `curl -X GET "http://localhost:8080/api/files?path=/path/in/bucket" `                                                  |
-| Exists   | `curl -I -X HEAD "http://localhost:8080/api/files?remoteSrc=/path/in/bucket/file.txt" `                                |
+| Exists   | `curl -I -X HEAD "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt" `                                |
 | Share    | `curl -X POST "http://localhost:8080/api/files/share?remoteSrc=/path/in/bucket/file.txt&expirationTime=3600" `         |
 
 ### Notes
@@ -39,7 +39,7 @@ This file is used to document the API. It describes the available endpoints, how
 1. Replace `/path/to/local/file.txt` with the actual path inside your container or mapped volume
 2. `remoteSrc` is the path in the bucket
 3. For **Exists**, `curl -I` shows only headers, including the status code
-4. All endpoints are under `http://localhost:8080/api`
+4. All endpoints are under `http://localhost:8080/api/files`
 
 ## Tips
 
