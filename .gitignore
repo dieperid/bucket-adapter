@@ -77,3 +77,6 @@ buildNumber.properties
 
 ### Doxygen ###
 docs/html
+
+### Project specific ###
+data/
