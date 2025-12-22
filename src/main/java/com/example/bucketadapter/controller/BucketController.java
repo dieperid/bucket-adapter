@@ -16,13 +16,98 @@ public class BucketController {
         this.bucketService = bucketService;
     }
 
-    /*
-     * CURL sample :
+    /**
+     * Upload a file to the bucket.
      * 
+     * CURL sample :
+     * curl -s
+     * "http://localhost:8080/api/upload?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
+     * 
+     * @param localPath - path to the local file
+     * @param remoteSrc - path in the bucket
+     */
+    @GetMapping("/upload")
+    public void upload(@RequestParam String localPath, @RequestParam String remoteSrc) {
+        bucketService.upload(localPath, remoteSrc);
+    }
+
+    /**
+     * Download a file from the bucket.
+     * 
+     * CURL sample :
+     * curl -s
+     * "http://localhost:8080/api/download?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
+     * 
+     * @param localPath - path to the local file
+     * @param remoteSrc - path in the bucket
+     */
+    @GetMapping("/download")
+    public void download(@RequestParam String localPath, @RequestParam String remoteSrc) {
+        bucketService.download(localPath, remoteSrc);
+    }
+
+    @GetMapping("/update")
+    public void update(@RequestParam String localPath, @RequestParam String remoteSrc) {
+        bucketService.update(localPath, remoteSrc);
+    }
+
+    /**
+     * Delete a file from the bucket.
+     * 
+     * CURL sample :
+     * curl -s
+     * "http://localhost:8080/api/delete?remoteSrc=/path/in/bucket/file.txt&recursive=false"
+     * 
+     * @param remoteSrc - path in the bucket
+     * @param recursive - whether to delete recursively
+     */
+    @GetMapping("/delete")
+    public void delete(@RequestParam String remoteSrc, @RequestParam(defaultValue = "false") boolean recursive) {
+        bucketService.delete(remoteSrc, recursive);
+    }
+
+    /**
+     * List all files in a directory.
+     * 
+     * CURL sample :
      * curl -s "http://localhost:8080/api/list?path="
+     * 
+     * @param path - directory path in the bucket
+     * @return - list of file paths
      */
     @GetMapping("/list")
     public List<String> list(@RequestParam String path) {
         return bucketService.list(path);
+    }
+
+    /**
+     * Check if a file exists in the bucket.
+     * 
+     * CURL sample :
+     * curl -s
+     * "http://localhost:8080/api/doesExists?remoteSrc=/path/in/bucket/file.txt"
+     *
+     * @param remoteSrc - path in the bucket
+     * @return - true if the file exists, false otherwise
+     */
+    @GetMapping("/doesExists")
+    public boolean doesExists(@RequestParam String remoteSrc) {
+        return bucketService.doesExists(remoteSrc);
+    }
+
+    /**
+     * Share a file from the bucket.
+     * 
+     * CURL sample :
+     * curl -s
+     * "http://localhost:8080/api/share?remoteSrc=/path/in/bucket/file.txt&expirationTime=3600"
+     * 
+     * @param remoteSrc      - path in the bucket
+     * @param expirationTime - expiration time in seconds
+     * @return - shared URL
+     */
+    @GetMapping("/share")
+    public String share(@RequestParam String remoteSrc, @RequestParam int expirationTime) {
+        return bucketService.share(remoteSrc, expirationTime);
     }
 }
