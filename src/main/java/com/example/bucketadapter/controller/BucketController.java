@@ -22,7 +22,7 @@ public class BucketController {
      * Upload a file to the bucket.
      * 
      * CURL sample :
-     * curl -s
+     * curl -X POST
      * "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
      * 
      * @param localPath - path to the local file
@@ -38,7 +38,7 @@ public class BucketController {
      * Download a file from the bucket.
      * 
      * CURL sample :
-     * curl -s
+     * curl -X GET
      * "http://localhost:8080/api/files/download?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
      * 
      * @param localPath - path to the local file
@@ -54,7 +54,7 @@ public class BucketController {
      * Update a file in the bucket.
      * 
      * CURL sample :
-     * curl -s
+     * curl -X PUT
      * "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt"
      * 
      * @param localPath - path to the local file
@@ -70,7 +70,7 @@ public class BucketController {
      * Delete a file from the bucket.
      * 
      * CURL sample :
-     * curl -s
+     * curl -X DELETE
      * "http://localhost:8080/api/files?remoteSrc=/path/in/bucket/file.txt&recursive=false"
      * 
      * @param remoteSrc - path in the bucket
@@ -86,7 +86,7 @@ public class BucketController {
      * List all files in a directory.
      * 
      * CURL sample :
-     * curl -s "http://localhost:8080/api/files?path="
+     * curl -X GET "http://localhost:8080/api/files?path="
      * 
      * @param path - directory path in the bucket
      * @return - list of file paths
@@ -100,7 +100,7 @@ public class BucketController {
      * Check if a file exists in the bucket.
      * 
      * CURL sample :
-     * curl -s
+     * curl -X GET
      * "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt"
      *
      * @param remoteSrc - path in the bucket
@@ -117,7 +117,7 @@ public class BucketController {
      * Share a file from the bucket.
      * 
      * CURL sample :
-     * curl -s
+     * curl -X POST
      * "http://localhost:8080/api/files/share?remoteSrc=/path/in/bucket/file.txt&expirationTime=3600"
      * 
      * @param remoteSrc      - path in the bucket
