@@ -12,7 +12,7 @@ public class BucketAdapterFactory {
     private Map<String, BucketAdapter> adapters;
 
     public BucketAdapter getAdapter() {
-        String provider = System.getenv("PROVIDER_IMPL");
+        String provider = System.getProperty("PROVIDER_IMPL");
 
         BucketAdapter adapter = adapters.get(provider);
         if (adapter == null) {
