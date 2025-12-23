@@ -81,6 +81,11 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void delete(String remoteSrc, boolean recursive) {
+        // Prevent deleting the root of the bucket
+        if ("/".equals(remoteSrc) || "".equals(remoteSrc)) {
+            throw new IllegalArgumentException("Deleting root is forbidden");
+        }
+
         if (!recursive) {
             // delete a single object
             if (!doesExists(remoteSrc)) {
@@ -93,10 +98,6 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .key(remoteSrc)
                     .build());
             return;
-        }
-
-        if (recursive && ("/".equals(remoteSrc) || "".equals(remoteSrc))) {
-            throw new IllegalArgumentException("Recursive delete on root is forbidden");
         }
 
         // recursive delete: delete all objects with prefix
