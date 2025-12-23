@@ -3,6 +3,9 @@ package com.example.bucketadapter.adapter.impl;
 import org.springframework.stereotype.Component;
 
 import com.example.bucketadapter.adapter.BucketAdapter;
+import com.example.bucketadapter.exception.BucketObjectNotFoundException;
+import com.example.bucketadapter.exception.BucketOperationException;
+import com.example.bucketadapter.exception.InvalidBucketPathException;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
@@ -43,18 +46,24 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void upload(String localSrc, String remoteSrc) {
+        File file = new File(localSrc);
+        if (!file.exists() || !file.isFile()) {
+            throw new InvalidBucketPathException(
+                    "Local file does not exist: " + localSrc);
+        }
+
         s3Client.putObject(PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(remoteSrc)
                 .build(),
-                RequestBody.fromFile(new File(localSrc)));
+                RequestBody.fromFile(file));
     }
 
     @Override
     public void download(String localSrc, String remoteSrc) {
         // First, check if the object exists
         if (!doesExists(remoteSrc)) {
-            throw new IllegalArgumentException("Cannot download: file does not exist in S3: " + remoteSrc);
+            throw new BucketObjectNotFoundException(remoteSrc);
         }
 
         s3Client.getObject(GetObjectRequest.builder()
@@ -68,7 +77,7 @@ public class AwsAdapterImpl implements BucketAdapter {
     public void update(String localSrc, String remoteSrc) {
         // First, check if the object exists
         if (!doesExists(remoteSrc)) {
-            throw new IllegalArgumentException("Cannot update: file does not exist in S3: " + remoteSrc);
+            throw new BucketObjectNotFoundException(remoteSrc);
         }
 
         // Replace the existing object
@@ -81,16 +90,13 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void delete(String remoteSrc, boolean recursive) {
-        // Prevent deleting the root of the bucket
-        if ("/".equals(remoteSrc) || "".equals(remoteSrc)) {
-            throw new IllegalArgumentException("Deleting root is forbidden");
-        }
+        validateRemoteSrc(remoteSrc);
+        validateNotRoot(remoteSrc);
 
         if (!recursive) {
             // delete a single object
             if (!doesExists(remoteSrc)) {
-                throw new IllegalArgumentException(
-                        "Cannot delete: file does not exist in S3: " + remoteSrc);
+                throw new BucketObjectNotFoundException(remoteSrc);
             }
 
             s3Client.deleteObject(DeleteObjectRequest.builder()
@@ -110,8 +116,7 @@ public class AwsAdapterImpl implements BucketAdapter {
                         .build());
 
         if (listResponse.contents().isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Cannot delete recursively: no objects found under " + remoteSrc);
+            throw new BucketObjectNotFoundException(remoteSrc);
         }
 
         List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
@@ -138,6 +143,8 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public boolean doesExists(String remoteSrc) {
+        validateRemoteSrc(remoteSrc);
+
         try {
             s3Client.headObject(HeadObjectRequest.builder()
                     .bucket(bucket)
@@ -149,17 +156,15 @@ public class AwsAdapterImpl implements BucketAdapter {
             if (e.statusCode() == 404) {
                 return false;
             }
-            throw new RuntimeException(
-                    "Error checking existence of " + remoteSrc, e);
+            throw new BucketOperationException(
+                    "AWS S3 error while checking existence of " + remoteSrc, e);
         }
     }
 
     @Override
     public String share(String remoteSrc, int expirationTime) {
-        // First, check if the object exists
-        if (!doesExists(remoteSrc)) {
-            throw new IllegalArgumentException("Cannot share: file does not exist in S3: " + remoteSrc);
-        }
+        validateRemoteSrc(remoteSrc);
+        validateExpiration(expirationTime);
 
         try (S3Presigner presigner = S3Presigner.builder()
                 .region(Region.of(resolveRegion()))
@@ -182,7 +187,8 @@ public class AwsAdapterImpl implements BucketAdapter {
             return presignedRequest.url().toString();
 
         } catch (S3Exception e) {
-            throw new RuntimeException("Error generating pre-signed URL for " + remoteSrc, e);
+            throw new BucketOperationException(
+                    "Error generating pre-signed URL for " + remoteSrc, e);
         }
     }
 
@@ -248,5 +254,39 @@ public class AwsAdapterImpl implements BucketAdapter {
                             "When running in Docker: Set environment variable " + envVar);
         }
         return value;
+    }
+
+    /**
+     * Validate that remoteSrc exists
+     * 
+     * @param remoteSrc
+     */
+    private void validateRemoteSrc(String remoteSrc) {
+        if (remoteSrc == null || remoteSrc.isBlank()) {
+            throw new InvalidBucketPathException("remoteSrc must not be null or empty");
+        }
+    }
+
+    /**
+     * Valide that remoteSrc is not root folder
+     * 
+     * @param remoteSrc
+     */
+    private void validateNotRoot(String remoteSrc) {
+        if ("/".equals(remoteSrc)) {
+            throw new InvalidBucketPathException("Root path '/' is forbidden");
+        }
+    }
+
+    /**
+     * Valide expiration time
+     * 
+     * @param expirationTime
+     */
+    private void validateExpiration(int expirationTime) {
+        if (expirationTime <= 0 || expirationTime > 7 * 24 * 3600) {
+            throw new InvalidBucketPathException(
+                    "expirationTime must be between 1 second and 7 days");
+        }
     }
 }
