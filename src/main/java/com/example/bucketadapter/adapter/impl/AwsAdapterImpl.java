@@ -81,14 +81,45 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void delete(String remoteSrc, boolean recursive) {
-        // First, check if the object exists
-        if (!doesExists(remoteSrc)) {
-            throw new IllegalArgumentException("Cannot delete: file does not exist in S3: " + remoteSrc);
+        if (!recursive) {
+            // delete a single object
+            if (!doesExists(remoteSrc)) {
+                throw new IllegalArgumentException(
+                        "Cannot delete: file does not exist in S3: " + remoteSrc);
+            }
+
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build());
+            return;
         }
 
-        s3Client.deleteObject(DeleteObjectRequest.builder()
+        if (recursive && ("/".equals(remoteSrc) || "".equals(remoteSrc))) {
+            throw new IllegalArgumentException("Recursive delete on root is forbidden");
+        }
+
+        // recursive delete: delete all objects with prefix
+        String prefix = remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/";
+
+        ListObjectsV2Response listResponse = s3Client.listObjectsV2(
+                ListObjectsV2Request.builder()
+                        .bucket(bucket)
+                        .prefix(prefix)
+                        .build());
+
+        if (listResponse.contents().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Cannot delete recursively: no objects found under " + remoteSrc);
+        }
+
+        List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
+                .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
+                .toList();
+
+        s3Client.deleteObjects(DeleteObjectsRequest.builder()
                 .bucket(bucket)
-                .key(remoteSrc)
+                .delete(Delete.builder().objects(objectsToDelete).build())
                 .build());
     }
 
