@@ -24,5 +24,8 @@ WORKDIR /app
 # Copier le jar depuis le build
 COPY --from=build /app/target/*-SNAPSHOT.jar app.jar
 
+# Copier le .env dans le conteneur
+COPY .env .env
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
