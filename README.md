@@ -114,7 +114,7 @@ chmod +x setup-test-data.sh
 
 2. Execute the script to create the **data** folder with sample files for testing :
 
-```
+```bash
 ./setup-test-data.sh
 ```
 
