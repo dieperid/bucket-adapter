@@ -1,16 +1,11 @@
-name: CI - Lint & Tests
+name: CI - Lint, Tests & Docker Build
 
 on:
-  push:
-    branches:
-      - feature/**
-      - release/**
-      - hotfix/**
   pull_request:
 
 jobs:
   build:
-    name: Lint & Test
+    name: Lint, Tests & Docker Build
     runs-on: ubuntu-latest
 
     steps:
@@ -29,3 +24,12 @@ jobs:
 
       - name: Run tests
         run: ./mvnw test
+
+      - name: Build Docker image
+        if: github.base_ref == 'develop' || github.base_ref == 'main' # Only build on develop or main branches
+        run: |
+          docker build \
+            --file Dockerfile \
+            --tag bucket-adapter:latest \
+            --progress=plain \
+            .
