@@ -154,6 +154,10 @@ docker build -t bucketadapter:latest .
 docker run -d -p 8080:8080 --name bucketadapter bucketadapter:latest
 ```
 
+### How to use the application ?
+
+To use the API you can read this [documentation](docs/api-documentation.md).
+
 ## Directory structure
 
 ```bash
