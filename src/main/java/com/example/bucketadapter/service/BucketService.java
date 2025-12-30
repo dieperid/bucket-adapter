@@ -5,14 +5,22 @@ import org.springframework.stereotype.Service;
 import com.example.bucketadapter.adapter.BucketAdapter;
 import com.example.bucketadapter.factory.BucketAdapterFactory;
 
+import jakarta.annotation.PostConstruct;
+
 import java.util.List;
 
 @Service
 public class BucketService {
 
-    private final BucketAdapter adapter;
+    private final BucketAdapterFactory factory;
+    private BucketAdapter adapter;
 
     public BucketService(BucketAdapterFactory factory) {
+        this.factory = factory;
+    }
+
+    @PostConstruct
+    void init() {
         this.adapter = factory.getAdapter();
     }
 

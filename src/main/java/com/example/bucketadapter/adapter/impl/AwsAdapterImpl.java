@@ -1,5 +1,9 @@
+/**
+ * Implementation of AWS S3 Bucket Adapter.
+ */
 package com.example.bucketadapter.adapter.impl;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.example.bucketadapter.adapter.BucketAdapter;
@@ -23,6 +27,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component("AWS")
+@Profile("!test")
 public class AwsAdapterImpl implements BucketAdapter {
 
     private final S3Client s3Client;
