@@ -8,7 +8,8 @@ import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
 
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -166,9 +167,18 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateExpiration(expirationTime);
 
+        String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
+        String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
+
+        if (accessKey == null || secretKey == null) {
+            throw new IllegalStateException("AWS credentials are not set in environment variables");
+        }
+
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
+
         try (S3Presigner presigner = S3Presigner.builder()
                 .region(Region.of(resolveRegion()))
-                .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
                 .build()) {
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
@@ -201,10 +211,18 @@ public class AwsAdapterImpl implements BucketAdapter {
      */
     private static S3Client createS3Client() {
         String region = resolveRegion();
+        String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
+        String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
+
+        if (accessKey == null || secretKey == null) {
+            throw new IllegalStateException("AWS credentials are not set in environment variables");
+        }
+
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
 
         return S3Client.builder()
                 .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
                 .build();
     }
 
@@ -242,7 +260,7 @@ public class AwsAdapterImpl implements BucketAdapter {
         // 1. FIRST: Check Docker/container environment variables (highest priority)
         String value = System.getenv(envVar);
 
-        // 2. SECOND: Check system properties (set by EnvConfig from .env)
+        // 2. SECOND: Check system properties (set by DotenvInitializer from .env)
         if (value == null || value.isBlank()) {
             value = System.getProperty(envVar); // AWS_BUCKET_NAME
         }

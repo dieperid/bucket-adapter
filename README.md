@@ -114,7 +114,7 @@ chmod +x setup-test-data.sh
 
 2. Execute the script to create the **data** folder with sample files for testing :
 
-```
+```bash
 ./setup-test-data.sh
 ```
 
@@ -152,6 +152,21 @@ docker build -t bucketadapter:latest .
 
 # Run the container exposing port 8080
 docker run -d -p 8080:8080 --name bucketadapter bucketadapter:latest
+```
+
+If you want to try the API on integration environment you'll have to run the container with a volume : 
+
+```bash
+docker run -d -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  --name bucketadapter bucketadapter:latest
+```
+
+Or you can copy a local file into the container :
+
+```bash
+# Syntax: docker cp <local-path> <container-name>:<container-path>
+docker cp ./data/file1.txt bucketadapter:/app/file1.txt
 ```
 
 ### How to use the application ?
