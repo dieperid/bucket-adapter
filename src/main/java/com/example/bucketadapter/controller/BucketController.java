@@ -1,7 +1,6 @@
 package com.example.bucketadapter.controller;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.bucketadapter.service.BucketService;
@@ -94,23 +93,6 @@ public class BucketController {
     @GetMapping(value = "/files", params = "path")
     public List<String> list(@RequestParam String path) {
         return bucketService.list(path);
-    }
-
-    /**
-     * Check if a file exists in the bucket.
-     * 
-     * CURL sample :
-     * curl -X GET
-     * "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt"
-     *
-     * @param remoteSrc - path in the bucket
-     * @return - true if the file exists, false otherwise
-     */
-    @GetMapping(value = "/files/exists", params = "remoteSrc")
-    public ResponseEntity<Void> doesExists(@RequestParam String remoteSrc) {
-        return bucketService.doesExists(remoteSrc)
-                ? ResponseEntity.ok().build()
-                : ResponseEntity.notFound().build();
     }
 
     /**

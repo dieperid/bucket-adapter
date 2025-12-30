@@ -11,7 +11,6 @@ This file is used to document the API. It describes the available endpoints, how
 | Update   | PUT         | `/api/files`          | `localPath` (String), `remoteSrc` (String)               | Replace an existing file in the bucket        | 204 No Content                              |
 | Delete   | DELETE      | `/api/files`          | `remoteSrc` (String), `recursive` (boolean, optional)    | Delete a file or folder from the bucket       | 204 No Content                              |
 | List     | GET         | `/api/files`          | `path` (String)                                          | List all files in a directory in the bucket   | 200 OK                                      |
-| Exists   | GET         | `/api/files/exists`   | `remoteSrc` (String)                                     | Check if a file exists in the bucket          | 200 OK if exists / 404 Not Found if missing |
 | Share    | POST        | `/api/files/share`    | `remoteSrc` (String), `expirationTime` (int, in seconds) | Generate a shared link for a file             | 200 OK                                      |
 
 ### Notes
@@ -30,7 +29,6 @@ This file is used to document the API. It describes the available endpoints, how
 | Update   | `curl -X PUT "http://localhost:8080/api/files?localPath=/path/to/local/file.txt&remoteSrc=/path/in/bucket/file.txt" `          |
 | Delete   | `curl -X DELETE "http://localhost:8080/api/files?remoteSrc=/path/in/bucket/file.txt&recursive=false" `                         |
 | List     | `curl -X GET "http://localhost:8080/api/files?path=/path/in/bucket" `                                                          |
-| Exists   | `curl -X GET "http://localhost:8080/api/files/exists?remoteSrc=/path/in/bucket/file.txt" `                                     |
 | Share    | `curl -X POST "http://localhost:8080/api/files/share?remoteSrc=/path/in/bucket/file.txt&expirationTime=3600" `                 |
 
 ### Notes
