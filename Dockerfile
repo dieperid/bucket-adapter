@@ -1,30 +1,35 @@
-# Étape 1 : Build avec Maven wrapper
+# syntax=docker/dockerfile:1
+
+# Step 1 : Build Maven
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-# Copier Maven wrapper
+# Copy Maven wrapper and pom.xml
 COPY mvnw .
 COPY .mvn .mvn
-
-# Copier pom.xml pour cache des dépendances
 COPY pom.xml .
+
 RUN chmod +x mvnw && ./mvnw dependency:go-offline
 
-# Copier le code source
+# Copy the source code
 COPY src ./src
 
-# Build Spring Boot
-# RUN ./mvnw clean test
+# Step 2 : Validation (run tests)
+FROM build AS test
+RUN ./mvnw clean test
+
+# Step 3 : Package for production
+FROM build AS package
 RUN ./mvnw clean package -DskipTests
 
-# Étape 2 : Image finale pour dev
-FROM eclipse-temurin:25-jdk
+# Step 4 : Final image (prod) lightweight
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
-# Copier le jar depuis le build
-COPY --from=build /app/target/*-SNAPSHOT.jar app.jar
+# Copy the jar from the build stage
+COPY --from=package /app/target/*-SNAPSHOT.jar app.jar
 
-# Copier le .env dans le conteneur
+# Copy .env file
 COPY .env .env
 
 EXPOSE 8080
