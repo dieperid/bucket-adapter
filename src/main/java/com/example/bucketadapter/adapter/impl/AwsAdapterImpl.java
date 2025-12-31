@@ -137,14 +137,19 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public List<String> list(String remoteSrc) {
-        ListObjectsV2Response response = s3Client.listObjectsV2(ListObjectsV2Request.builder()
-                .bucket(bucket)
-                .prefix(remoteSrc)
-                .build());
+        try {
+            ListObjectsV2Response response = s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                    .bucket(bucket)
+                    .prefix(remoteSrc)
+                    .build());
 
-        return response.contents().stream()
-                .map(S3Object::key)
-                .collect(Collectors.toList());
+            return response.contents().stream()
+                    .map(S3Object::key)
+                    .collect(Collectors.toList());
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while listing files with prefix " + remoteSrc, e);
+        }
     }
 
     @Override
