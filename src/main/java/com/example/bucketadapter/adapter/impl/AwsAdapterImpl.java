@@ -92,17 +92,28 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void update(String localSrc, String remoteSrc) {
-        // First, check if the object exists
-        if (!doesExists(remoteSrc)) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
+        try {
+            File file = new File(localSrc);
+            if (!file.exists() || !file.isFile()) {
+                throw new InvalidBucketPathException(
+                        "Local file does not exist or is not a file: " + localSrc);
+            }
 
-        // Replace the existing object
-        s3Client.putObject(PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(remoteSrc)
-                .build(),
-                RequestBody.fromFile(new File(localSrc)));
+            // Check if the object exists
+            if (!doesExists(remoteSrc)) {
+                throw new BucketObjectNotFoundException(remoteSrc);
+            }
+
+            // Replace the existing object
+            s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build(),
+                    RequestBody.fromFile(new File(localSrc)));
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while updating file at " + remoteSrc, e);
+        }
     }
 
     @Override
