@@ -1,0 +1,27 @@
+name: Publish OpenAPI Docs
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate OpenAPI file
+        run: |
+          ./mvnw spring-boot:run &
+          sleep 15
+          curl http://localhost:8080/v3/api-docs.yaml > docs/openapi.yaml
+
+      - name: Commit OpenAPI
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/openapi.yaml
+          git commit -m "docs: update OpenAPI spec" || echo "No changes"
+          git push
