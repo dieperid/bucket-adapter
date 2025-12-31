@@ -1,10 +1,14 @@
 package com.example.bucketadapter.adapter.impl;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,17 +27,20 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.example.bucketadapter.exception.BucketOperationException;
+import com.example.bucketadapter.exception.InvalidBucketPathException;
 
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class AwsAdapterImplTest {
 
     @Mock
-    private S3Client mockS3Client;
+    private S3Client s3Client;
 
     @InjectMocks
     private AwsAdapterImpl adapter;
@@ -49,7 +56,7 @@ public class AwsAdapterImplTest {
     @BeforeEach
     void setUp() throws IOException {
         closeable = MockitoAnnotations.openMocks(this);
-        adapter = new AwsAdapterImpl(mockS3Client, bucketName);
+        adapter = new AwsAdapterImpl(s3Client, bucketName);
 
         tempFile = Files.createTempFile("upload-test-", ".txt");
         Files.writeString(tempFile, "test content");
@@ -68,6 +75,70 @@ public class AwsAdapterImplTest {
     // Upload method tests
     // ------------------------------------------------------------------
 
+    @Test
+    void upload_shouldUploadFile_whenFileIsValid() {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        // when / then
+        assertDoesNotThrow(() -> adapter.upload(tempFile.toString(), remoteSrc));
+
+        verify(s3Client, times(1)).putObject(
+                argThat((PutObjectRequest req) -> req.bucket().equals(bucketName)
+                        && req.key().equals(remoteSrc)),
+                any(RequestBody.class));
+    }
+
+    @Test
+    void upload_shouldFail_whenLocalFileDoesNotExist() {
+        // given
+        String missingFile = "/path/to/local/missing.txt";
+
+        // when / then
+        InvalidBucketPathException exception = assertThrows(InvalidBucketPathException.class,
+                () -> adapter.upload(missingFile, "dir/file.txt"));
+
+        assertTrue(exception.getMessage().contains("Local file does not exist"));
+
+        verify(s3Client, never()).putObject(
+                any(PutObjectRequest.class),
+                any(RequestBody.class));
+    }
+
+    @Test
+    void upload_shouldFail_whenLocalPathIsDirectory() {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        // when / then
+        InvalidBucketPathException exception = assertThrows(InvalidBucketPathException.class,
+                () -> adapter.upload(tempDirectory.toString(), remoteSrc));
+
+        // then
+        assertTrue(exception.getMessage().contains("Local file does not exist"));
+
+        verify(s3Client, never()).putObject(
+                any(PutObjectRequest.class),
+                any(RequestBody.class));
+    }
+
+    @Test
+    void upload_shouldThrowBucketOperationException_whenS3Fails() {
+        // given
+        doThrow(S3Exception.builder()
+                .statusCode(500)
+                .message("AWS internal error")
+                .build())
+                .when(s3Client)
+                .putObject(any(PutObjectRequest.class), any(RequestBody.class));
+
+        // when / then
+        BucketOperationException exception = assertThrows(BucketOperationException.class,
+                () -> adapter.upload(tempFile.toString(), "dir/file.txt"));
+
+        assertTrue(exception.getCause() instanceof S3Exception);
+    }
+
     // ------------------------------------------------------------------
     // List method tests
     // ------------------------------------------------------------------
@@ -83,7 +154,7 @@ public class AwsAdapterImplTest {
                 .contents(Arrays.asList(obj1, obj2))
                 .build();
 
-        when(mockS3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
 
         // when
         List<String> result = adapter.list(prefix);
@@ -94,7 +165,7 @@ public class AwsAdapterImplTest {
         assertTrue(result.contains("file1.txt"));
         assertTrue(result.contains("dir/file2.txt"));
 
-        verify(mockS3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
     }
 
     @Test
@@ -106,7 +177,7 @@ public class AwsAdapterImplTest {
                 .contents(List.of())
                 .build();
 
-        when(mockS3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
 
         // when
         List<String> result = adapter.list(prefix);
@@ -115,14 +186,14 @@ public class AwsAdapterImplTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
-        verify(mockS3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
     }
 
     @Test
     void list_shouldThrowBucketOperationException_whenAwsFails() {
         // given
         String prefix = "dir/";
-        when(mockS3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
                 .thenThrow(S3Exception.builder().statusCode(500).message("Internal Server Error").build());
 
         // when / then
@@ -132,6 +203,6 @@ public class AwsAdapterImplTest {
 
         assertTrue(exception.getMessage().contains("AWS S3 error") || exception.getCause() instanceof S3Exception);
 
-        verify(mockS3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
     }
 }
