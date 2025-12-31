@@ -2,6 +2,7 @@ package com.example.bucketadapter.adapter.impl;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -285,5 +286,89 @@ public class AwsAdapterImplTest {
         assertTrue(exception.getMessage().contains("AWS S3 error") || exception.getCause() instanceof S3Exception);
 
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+    }
+
+    // ------------------------------------------------------------------
+    // doesExists method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void doesExists_shouldReturnTrue_whenObjectExists() {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
+
+        // when
+        boolean exists = adapter.doesExists(remoteSrc);
+
+        // then
+        assertTrue(exists);
+
+        verify(s3Client, times(1))
+                .headObject(any(HeadObjectRequest.class));
+    }
+
+    @Test
+    void doesExists_shouldReturnFalse_whenObjectDoesNotExist() {
+        // given
+        String remoteSrc = "dir/missing.txt";
+
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder()
+                        .statusCode(404)
+                        .build());
+
+        // when
+        boolean exists = adapter.doesExists(remoteSrc);
+
+        // then
+        assertFalse(exists);
+
+        verify(s3Client, times(1))
+                .headObject(any(HeadObjectRequest.class));
+    }
+
+    @Test
+    void doesExists_shouldFail_whenRemoteSrcIsNull() {
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.doesExists(null));
+
+        verify(s3Client, never())
+                .headObject(any(HeadObjectRequest.class));
+    }
+
+    @Test
+    void doesExists_shouldFail_whenRemoteSrcIsBlank() {
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.doesExists("   "));
+
+        verify(s3Client, never())
+                .headObject(any(HeadObjectRequest.class));
+    }
+
+    @Test
+    void doesExists_shouldThrowBucketOperationException_whenAwsFails() {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder()
+                        .statusCode(500)
+                        .message("AWS internal error")
+                        .build());
+
+        // when / then
+        BucketOperationException exception = assertThrows(BucketOperationException.class,
+                () -> adapter.doesExists(remoteSrc));
+
+        // then
+        assertTrue(exception.getCause() instanceof S3Exception);
+
+        verify(s3Client, times(1))
+                .headObject(any(HeadObjectRequest.class));
     }
 }
