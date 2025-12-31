@@ -9,6 +9,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,26 +36,44 @@ public class AwsAdapterImplTest {
     private S3Client mockS3Client;
 
     @InjectMocks
-    private AwsAdapterImpl awsAdapterImpl;
+    private AwsAdapterImpl adapter;
 
     private AutoCloseable closeable;
 
     private final String bucketName = "test-bucket";
 
+    private Path tempFile;
+
+    private Path tempDirectory;
+
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         closeable = MockitoAnnotations.openMocks(this);
-        // Bucket injection via constructor
-        awsAdapterImpl = new AwsAdapterImpl(mockS3Client, bucketName);
+        adapter = new AwsAdapterImpl(mockS3Client, bucketName);
+
+        tempFile = Files.createTempFile("upload-test-", ".txt");
+        Files.writeString(tempFile, "test content");
+
+        tempDirectory = Files.createTempDirectory("upload-dir-");
     }
 
     @AfterEach
     void tearDown() throws Exception {
+        Files.deleteIfExists(tempFile);
+        Files.deleteIfExists(tempDirectory);
         closeable.close();
     }
 
+    // ------------------------------------------------------------------
+    // Upload method tests
+    // ------------------------------------------------------------------
+
+    // ------------------------------------------------------------------
+    // List method tests
+    // ------------------------------------------------------------------
+
     @Test
-    void testListFiles_Nominal() {
+    void list_shouldReturnObjects_whenObjectsExist() {
         // given
         String prefix = "dir/";
         S3Object obj1 = S3Object.builder().key("file1.txt").build();
@@ -65,7 +86,7 @@ public class AwsAdapterImplTest {
         when(mockS3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
 
         // when
-        List<String> result = awsAdapterImpl.list(prefix);
+        List<String> result = adapter.list(prefix);
 
         // then
         assertNotNull(result);
@@ -77,7 +98,7 @@ public class AwsAdapterImplTest {
     }
 
     @Test
-    void testListFiles_Empty() {
+    void list_shouldReturnEmptyList_whenNoObjectsFound() {
         // given
         String prefix = "empty/";
 
@@ -88,7 +109,7 @@ public class AwsAdapterImplTest {
         when(mockS3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
 
         // when
-        List<String> result = awsAdapterImpl.list(prefix);
+        List<String> result = adapter.list(prefix);
 
         // then
         assertNotNull(result);
@@ -98,7 +119,7 @@ public class AwsAdapterImplTest {
     }
 
     @Test
-    void testListFiles_AwsError() {
+    void list_shouldThrowBucketOperationException_whenAwsFails() {
         // given
         String prefix = "dir/";
         when(mockS3Client.listObjectsV2(any(ListObjectsV2Request.class)))
@@ -106,7 +127,7 @@ public class AwsAdapterImplTest {
 
         // when / then
         BucketOperationException exception = assertThrows(BucketOperationException.class, () -> {
-            awsAdapterImpl.list(prefix);
+            adapter.list(prefix);
         });
 
         assertTrue(exception.getMessage().contains("AWS S3 error") || exception.getCause() instanceof S3Exception);
