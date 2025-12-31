@@ -52,17 +52,23 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void upload(String localSrc, String remoteSrc) {
-        File file = new File(localSrc);
-        if (!file.exists() || !file.isFile()) {
-            throw new InvalidBucketPathException(
-                    "Local file does not exist: " + localSrc);
-        }
+        try {
 
-        s3Client.putObject(PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(remoteSrc)
-                .build(),
-                RequestBody.fromFile(file));
+            File file = new File(localSrc);
+            if (!file.exists() || !file.isFile()) {
+                throw new InvalidBucketPathException(
+                        "Local file does not exist: " + localSrc);
+            }
+
+            s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build(),
+                    RequestBody.fromFile(file));
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while uploading file to " + remoteSrc, e);
+        }
     }
 
     @Override
