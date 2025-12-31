@@ -9,8 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,6 +42,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -219,6 +222,107 @@ public class AwsAdapterImplTest {
 
         // then
         assertTrue(exception.getCause() instanceof S3Exception);
+    }
+
+    // ------------------------------------------------------------------
+    // Update method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void update_shouldReplaceObject_whenObjectExistsAndLocalFileIsValid() throws IOException {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        Path tempFile = Files.createTempFile("update-test", ".txt");
+        Files.writeString(tempFile, "new content");
+
+        AwsAdapterImpl spyAdapter = spy(adapter);
+
+        doReturn(true)
+                .when(spyAdapter)
+                .doesExists(remoteSrc);
+
+        when(s3Client.putObject(
+                any(PutObjectRequest.class),
+                any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+
+        // when / then
+        assertDoesNotThrow(() -> spyAdapter.update(tempFile.toString(), remoteSrc));
+
+        verify(spyAdapter, times(1))
+                .doesExists(remoteSrc);
+
+        verify(s3Client, times(1))
+                .putObject(any(PutObjectRequest.class), any(RequestBody.class));
+    }
+
+    @Test
+    void update_shouldFail_whenRemoteObjectDoesNotExist() throws IOException {
+        // given
+        String remoteSrc = "missing/file.txt";
+
+        Path tempFile = Files.createTempFile("update-test", ".txt");
+        Files.writeString(tempFile, "content");
+
+        AwsAdapterImpl spyAdapter = spy(adapter);
+
+        // when
+        doReturn(false).when(spyAdapter).doesExists(remoteSrc);
+
+        // then
+        assertThrows(BucketObjectNotFoundException.class,
+                () -> spyAdapter.update(tempFile.toString(), remoteSrc));
+
+        verify(spyAdapter, times(1)).doesExists(remoteSrc);
+        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+    }
+
+    @Test
+    void update_shouldFail_whenLocalFileIsInvalid() {
+        // given
+        String remoteSrc = "dir/file.txt";
+        String localSrc = "/invalid/path/file.txt";
+
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.update(localSrc, remoteSrc));
+
+        // then
+        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+    }
+
+    @Test
+    void update_shouldFail_whenAwsThrowsException() throws IOException {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        Path tempFile = Files.createTempFile("update-test", ".txt");
+        Files.writeString(tempFile, "content");
+
+        AwsAdapterImpl spyAdapter = spy(adapter);
+
+        doReturn(true)
+                .when(spyAdapter)
+                .doesExists(remoteSrc);
+
+        when(s3Client.putObject(
+                any(PutObjectRequest.class),
+                any(RequestBody.class)))
+                .thenThrow(S3Exception.builder()
+                        .statusCode(500)
+                        .message("AWS failure")
+                        .build());
+
+        // when / then
+        assertThrows(BucketOperationException.class,
+                () -> spyAdapter.update(tempFile.toString(), remoteSrc));
+
+        verify(spyAdapter, times(1))
+                .doesExists(remoteSrc);
+
+        verify(s3Client, times(1))
+                .putObject(any(PutObjectRequest.class), any(RequestBody.class));
     }
 
     // ------------------------------------------------------------------
