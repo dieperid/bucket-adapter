@@ -73,16 +73,21 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void download(String localSrc, String remoteSrc) {
-        // First, check if the object exists
-        if (!doesExists(remoteSrc)) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
+        try {
+            // First, check if the object exists
+            if (!doesExists(remoteSrc)) {
+                throw new BucketObjectNotFoundException(remoteSrc);
+            }
 
-        s3Client.getObject(GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(remoteSrc)
-                .build(),
-                Paths.get(localSrc));
+            s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build(),
+                    Paths.get(localSrc));
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while downloading file from " + remoteSrc, e);
+        }
     }
 
     @Override
