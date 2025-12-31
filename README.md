@@ -173,6 +173,8 @@ docker cp ./data/file1.txt bucketadapter:/app/file1.txt
 
 To use the API you can read this [documentation](docs/api-documentation.md).
 
+You can also find the [online documentation](https://dieperid.github.io/bucket-adapter/) using Redoc to publish the API documentation.
+
 ## Directory structure
 
 ```bash
