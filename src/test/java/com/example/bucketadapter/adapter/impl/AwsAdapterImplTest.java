@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -26,11 +27,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -136,6 +141,82 @@ public class AwsAdapterImplTest {
         BucketOperationException exception = assertThrows(BucketOperationException.class,
                 () -> adapter.upload(tempFile.toString(), "dir/file.txt"));
 
+        assertTrue(exception.getCause() instanceof S3Exception);
+    }
+
+    // ------------------------------------------------------------------
+    // Download method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void download_shouldDownloadFile_whenObjectExists() {
+        // given
+        String remoteSrc = "dir/file.txt";
+        String localSrc = "/tmp/file.txt";
+
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
+
+        // when / then
+        assertDoesNotThrow(() -> adapter.download(localSrc, remoteSrc));
+
+        // then
+        verify(s3Client, times(1))
+                .headObject(any(HeadObjectRequest.class));
+
+        verify(s3Client, times(1))
+                .getObject(
+                        argThat((GetObjectRequest req) -> req.bucket().equals(bucketName)
+                                && req.key().equals(remoteSrc)),
+                        eq(Path.of(localSrc)));
+    }
+
+    @Test
+    void download_shouldFail_whenObjectDoesNotExist() {
+        // given
+        String remoteSrc = "missing/file.txt";
+        String localSrc = "/tmp/file.txt";
+
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder()
+                        .statusCode(404)
+                        .build());
+
+        // when / then
+        assertThrows(BucketObjectNotFoundException.class,
+                () -> adapter.download(localSrc, remoteSrc));
+
+        // then
+        verify(s3Client, times(1))
+                .headObject(any(HeadObjectRequest.class));
+
+        verify(s3Client, never())
+                .getObject(any(GetObjectRequest.class), any(Path.class));
+    }
+
+    @Test
+    void download_shouldThrowBucketOperationException_whenS3Fails() {
+        // given
+        String remoteSrc = "dir/file.txt";
+        String localSrc = "/tmp/file.txt";
+
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
+
+        doThrow(S3Exception.builder()
+                .statusCode(500)
+                .message("AWS error")
+                .build())
+                .when(s3Client)
+                .getObject(
+                        any(GetObjectRequest.class),
+                        any(Path.class));
+
+        // when
+        BucketOperationException exception = assertThrows(BucketOperationException.class,
+                () -> adapter.download(localSrc, remoteSrc));
+
+        // then
         assertTrue(exception.getCause() instanceof S3Exception);
     }
 
