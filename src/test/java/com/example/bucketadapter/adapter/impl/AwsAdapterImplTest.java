@@ -40,6 +40,8 @@ import com.example.bucketadapter.exception.InvalidBucketPathException;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -335,6 +337,109 @@ public class AwsAdapterImplTest {
 
         verify(s3Client, times(1))
                 .putObject(any(PutObjectRequest.class), any(RequestBody.class));
+    }
+
+    // ------------------------------------------------------------------
+    // Delete method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void delete_shouldDeleteObject_whenRecursiveFalse() {
+        // given
+        String remoteSrc = "dir/file.txt";
+
+        AwsAdapterImpl spyAdapter = spy(adapter);
+        doReturn(true).when(spyAdapter).doesExists(remoteSrc);
+
+        // when
+        assertDoesNotThrow(() -> spyAdapter.delete(remoteSrc, false));
+
+        // then
+        verify(spyAdapter).doesExists(remoteSrc);
+        verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+    }
+
+    @Test
+    void delete_shouldFail_whenObjectDoesNotExist_andNotRecursive() {
+        // given
+        String remoteSrc = "missing/file.txt";
+
+        AwsAdapterImpl spyAdapter = spy(adapter);
+        doReturn(false).when(spyAdapter).doesExists(remoteSrc);
+
+        // when / then
+        assertThrows(BucketObjectNotFoundException.class,
+                () -> spyAdapter.delete(remoteSrc, false));
+
+        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+    }
+
+    @Test
+    void delete_shouldDeleteObjectsRecursively() {
+        // given
+        String remoteSrc = "dir";
+
+        List<S3Object> objects = List.of(
+                S3Object.builder().key("dir/file1.txt").build(),
+                S3Object.builder().key("dir/sub/file2.txt").build());
+
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(ListObjectsV2Response.builder()
+                        .contents(objects)
+                        .build());
+
+        // when
+        assertDoesNotThrow(() -> adapter.delete(remoteSrc, true));
+
+        // then
+        verify(s3Client).listObjectsV2(any(ListObjectsV2Request.class));
+        verify(s3Client).deleteObjects(any(DeleteObjectsRequest.class));
+    }
+
+    @Test
+    void delete_shouldFail_whenNoObjectsFoundRecursively() {
+        // given
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(ListObjectsV2Response.builder()
+                        .contents(List.of())
+                        .build());
+
+        // when / then
+        assertThrows(BucketObjectNotFoundException.class,
+                () -> adapter.delete("empty", true));
+
+        verify(s3Client, never()).deleteObjects(any(DeleteObjectsRequest.class));
+    }
+
+    @Test
+    void delete_shouldFail_whenRemoteSrcIsInvalid() {
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.delete("", false));
+
+        verifyNoInteractions(s3Client);
+    }
+
+    @Test
+    void delete_shouldFail_whenRemoteSrcIsRoot() {
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.delete("/", true));
+
+        verifyNoInteractions(s3Client);
+    }
+
+    @Test
+    void delete_shouldFail_whenAwsThrowsException() {
+        // given
+        AwsAdapterImpl spyAdapter = spy(adapter);
+        doReturn(true).when(spyAdapter).doesExists("dir/file.txt");
+
+        doThrow(S3Exception.builder().statusCode(500).build())
+                .when(s3Client)
+                .deleteObject(any(DeleteObjectRequest.class));
+
+        // when / then
+        assertThrows(BucketOperationException.class,
+                () -> spyAdapter.delete("dir/file.txt", false));
     }
 
     // ------------------------------------------------------------------
