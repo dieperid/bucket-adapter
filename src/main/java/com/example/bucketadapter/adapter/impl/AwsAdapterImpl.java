@@ -24,6 +24,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Component("AWS")
@@ -32,11 +33,13 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     private final S3Client s3Client;
     private final String bucket;
+    private final Supplier<S3Presigner> presignerSupplier;
 
     public AwsAdapterImpl() {
         this(
                 createS3Client(),
-                resolveBucketName());
+                resolveBucketName(),
+                AwsAdapterImpl::createS3Presigner);
     }
 
     /**
@@ -45,9 +48,10 @@ public class AwsAdapterImpl implements BucketAdapter {
      * @param s3Client - S3 client
      * @param bucket   - S3 bucket name
      */
-    AwsAdapterImpl(S3Client s3Client, String bucket) {
+    AwsAdapterImpl(S3Client s3Client, String bucket, Supplier<S3Presigner> presignerSupplier) {
         this.s3Client = s3Client;
         this.bucket = bucket;
+        this.presignerSupplier = presignerSupplier;
     }
 
     @Override
@@ -199,19 +203,7 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateExpiration(expirationTime);
 
-        String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
-        String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
-
-        if (accessKey == null || secretKey == null) {
-            throw new IllegalStateException("AWS credentials are not set in environment variables");
-        }
-
-        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
-
-        try (S3Presigner presigner = S3Presigner.builder()
-                .region(Region.of(resolveRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                .build()) {
+        try (S3Presigner presigner = presignerSupplier.get()) {
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucket)
@@ -254,6 +246,23 @@ public class AwsAdapterImpl implements BucketAdapter {
 
         return S3Client.builder()
                 .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .build();
+    }
+
+    /**
+     * Create S3 presigner with resolved region and default credentials provider.
+     * 
+     * @return S3 presigner
+     */
+    private static S3Presigner createS3Presigner() {
+        String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
+        String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
+
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
+
+        return S3Presigner.builder()
+                .region(Region.of(resolveRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
                 .build();
     }
