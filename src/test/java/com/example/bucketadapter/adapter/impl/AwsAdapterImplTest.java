@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,11 +46,15 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 public class AwsAdapterImplTest {
 
     @Mock
     private S3Client s3Client;
+
+    @Mock
+    private S3Presigner s3Presigner;
 
     @InjectMocks
     private AwsAdapterImpl adapter;
@@ -62,10 +67,12 @@ public class AwsAdapterImplTest {
 
     private Path tempDirectory;
 
+    Supplier<S3Presigner> presignerSupplier = () -> s3Presigner;
+
     @BeforeEach
     void setUp() throws IOException {
         closeable = MockitoAnnotations.openMocks(this);
-        adapter = new AwsAdapterImpl(s3Client, bucketName);
+        adapter = new AwsAdapterImpl(s3Client, bucketName, presignerSupplier);
 
         tempFile = Files.createTempFile("upload-test-", ".txt");
         Files.writeString(tempFile, "test content");
