@@ -125,40 +125,45 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateNotRoot(remoteSrc);
 
-        if (!recursive) {
-            // delete a single object
-            if (!doesExists(remoteSrc)) {
+        try {
+            if (!recursive) {
+                // delete a single object
+                if (!doesExists(remoteSrc)) {
+                    throw new BucketObjectNotFoundException(remoteSrc);
+                }
+
+                s3Client.deleteObject(DeleteObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(remoteSrc)
+                        .build());
+                return;
+            }
+
+            // recursive delete: delete all objects with prefix
+            String prefix = remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/";
+
+            ListObjectsV2Response listResponse = s3Client.listObjectsV2(
+                    ListObjectsV2Request.builder()
+                            .bucket(bucket)
+                            .prefix(prefix)
+                            .build());
+
+            if (listResponse.contents().isEmpty()) {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
-            s3Client.deleteObject(DeleteObjectRequest.builder()
+            List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
+                    .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
+                    .toList();
+
+            s3Client.deleteObjects(DeleteObjectsRequest.builder()
                     .bucket(bucket)
-                    .key(remoteSrc)
+                    .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
-            return;
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while deleting file(s) at " + remoteSrc, e);
         }
-
-        // recursive delete: delete all objects with prefix
-        String prefix = remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/";
-
-        ListObjectsV2Response listResponse = s3Client.listObjectsV2(
-                ListObjectsV2Request.builder()
-                        .bucket(bucket)
-                        .prefix(prefix)
-                        .build());
-
-        if (listResponse.contents().isEmpty()) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
-
-        List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
-                .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
-                .toList();
-
-        s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                .bucket(bucket)
-                .delete(Delete.builder().objects(objectsToDelete).build())
-                .build());
     }
 
     @Override
