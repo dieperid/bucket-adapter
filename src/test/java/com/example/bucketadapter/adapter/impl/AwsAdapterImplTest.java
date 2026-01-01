@@ -11,13 +11,16 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -47,6 +50,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 public class AwsAdapterImplTest {
 
@@ -482,4 +487,89 @@ public class AwsAdapterImplTest {
         verify(s3Client, times(1))
                 .headObject(any(HeadObjectRequest.class));
     }
+
+    // ------------------------------------------------------------------
+    // Share method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void share_shouldReturnPresignedUrl_whenInputsAreValid() throws Exception {
+        // given
+        String remoteSrc = "dir/file.txt";
+        int expirationTime = 3600;
+
+        PresignedGetObjectRequest presignedRequest = mock(PresignedGetObjectRequest.class);
+        when(presignedRequest.url()).thenReturn(URI.create("https://signed-url").toURL());
+
+        when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class)))
+                .thenReturn(presignedRequest);
+
+        // when
+        String result = adapter.share(remoteSrc, expirationTime);
+
+        // then
+        assertNotNull(result);
+        assertFalse(result.isBlank());
+        assertTrue(result.contains("https://"));
+
+        verify(s3Presigner, times(1))
+                .presignGetObject(any(GetObjectPresignRequest.class));
+    }
+
+    @Test
+    void share_shouldFail_whenRemoteSrcIsNull() {
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.share(null, 3600));
+
+        verifyNoInteractions(s3Presigner);
+    }
+
+    @Test
+    void share_shouldFail_whenRemoteSrcIsBlank() {
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.share("   ", 3600));
+
+        verifyNoInteractions(s3Presigner);
+    }
+
+    @Test
+    void share_shouldFail_whenExpirationIsZero() {
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.share("dir/file.txt", 0));
+
+        verifyNoInteractions(s3Presigner);
+    }
+
+    @Test
+    void share_shouldFail_whenExpirationIsTooLarge() {
+        // given
+        int moreThan7Days = 7 * 24 * 3600 + 1;
+
+        // when / then
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.share("dir/file.txt", moreThan7Days));
+
+        verifyNoInteractions(s3Presigner);
+    }
+
+    @Test
+    void share_shouldFail_whenAwsThrowsException() {
+        // given
+        when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class)))
+                .thenThrow(S3Exception.builder().message("AWS error").build());
+
+        // when
+        BucketOperationException exception = assertThrows(BucketOperationException.class,
+                () -> adapter.share("dir/file.txt", 3600));
+
+        // then
+        assertFalse(exception.getMessage().contains("AWS"));
+
+        verify(s3Presigner, times(1))
+                .presignGetObject(any(GetObjectPresignRequest.class));
+    }
+
 }
