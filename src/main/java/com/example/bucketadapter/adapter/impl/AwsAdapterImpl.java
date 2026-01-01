@@ -24,6 +24,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Component("AWS")
@@ -32,11 +33,13 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     private final S3Client s3Client;
     private final String bucket;
+    private final Supplier<S3Presigner> presignerSupplier;
 
     public AwsAdapterImpl() {
         this(
                 createS3Client(),
-                resolveBucketName());
+                resolveBucketName(),
+                AwsAdapterImpl::createS3Presigner);
     }
 
     /**
@@ -45,53 +48,76 @@ public class AwsAdapterImpl implements BucketAdapter {
      * @param s3Client - S3 client
      * @param bucket   - S3 bucket name
      */
-    AwsAdapterImpl(S3Client s3Client, String bucket) {
+    AwsAdapterImpl(S3Client s3Client, String bucket, Supplier<S3Presigner> presignerSupplier) {
         this.s3Client = s3Client;
         this.bucket = bucket;
+        this.presignerSupplier = presignerSupplier;
     }
 
     @Override
     public void upload(String localSrc, String remoteSrc) {
-        File file = new File(localSrc);
-        if (!file.exists() || !file.isFile()) {
-            throw new InvalidBucketPathException(
-                    "Local file does not exist: " + localSrc);
-        }
+        try {
 
-        s3Client.putObject(PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(remoteSrc)
-                .build(),
-                RequestBody.fromFile(file));
+            File file = new File(localSrc);
+            if (!file.exists() || !file.isFile()) {
+                throw new InvalidBucketPathException(
+                        "Local file does not exist: " + localSrc);
+            }
+
+            s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build(),
+                    RequestBody.fromFile(file));
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while uploading file to " + remoteSrc, e);
+        }
     }
 
     @Override
     public void download(String localSrc, String remoteSrc) {
-        // First, check if the object exists
-        if (!doesExists(remoteSrc)) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
+        try {
+            // First, check if the object exists
+            if (!doesExists(remoteSrc)) {
+                throw new BucketObjectNotFoundException(remoteSrc);
+            }
 
-        s3Client.getObject(GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(remoteSrc)
-                .build(),
-                Paths.get(localSrc));
+            s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build(),
+                    Paths.get(localSrc));
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while downloading file from " + remoteSrc, e);
+        }
     }
 
     @Override
     public void update(String localSrc, String remoteSrc) {
-        // First, check if the object exists
-        if (!doesExists(remoteSrc)) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
+        try {
+            File file = new File(localSrc);
+            if (!file.exists() || !file.isFile()) {
+                throw new InvalidBucketPathException(
+                        "Local file does not exist or is not a file: " + localSrc);
+            }
 
-        // Replace the existing object
-        s3Client.putObject(PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(remoteSrc)
-                .build(),
-                RequestBody.fromFile(new File(localSrc)));
+            // Check if the object exists
+            if (!doesExists(remoteSrc)) {
+                throw new BucketObjectNotFoundException(remoteSrc);
+            }
+
+            // Replace the existing object
+            s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(remoteSrc)
+                    .build(),
+                    RequestBody.fromFile(new File(localSrc)));
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while updating file at " + remoteSrc, e);
+        }
     }
 
     @Override
@@ -99,52 +125,62 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateNotRoot(remoteSrc);
 
-        if (!recursive) {
-            // delete a single object
-            if (!doesExists(remoteSrc)) {
+        try {
+            if (!recursive) {
+                // delete a single object
+                if (!doesExists(remoteSrc)) {
+                    throw new BucketObjectNotFoundException(remoteSrc);
+                }
+
+                s3Client.deleteObject(DeleteObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(remoteSrc)
+                        .build());
+                return;
+            }
+
+            // recursive delete: delete all objects with prefix
+            String prefix = remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/";
+
+            ListObjectsV2Response listResponse = s3Client.listObjectsV2(
+                    ListObjectsV2Request.builder()
+                            .bucket(bucket)
+                            .prefix(prefix)
+                            .build());
+
+            if (listResponse.contents().isEmpty()) {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
-            s3Client.deleteObject(DeleteObjectRequest.builder()
+            List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
+                    .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
+                    .toList();
+
+            s3Client.deleteObjects(DeleteObjectsRequest.builder()
                     .bucket(bucket)
-                    .key(remoteSrc)
+                    .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
-            return;
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while deleting file(s) at " + remoteSrc, e);
         }
-
-        // recursive delete: delete all objects with prefix
-        String prefix = remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/";
-
-        ListObjectsV2Response listResponse = s3Client.listObjectsV2(
-                ListObjectsV2Request.builder()
-                        .bucket(bucket)
-                        .prefix(prefix)
-                        .build());
-
-        if (listResponse.contents().isEmpty()) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
-
-        List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
-                .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
-                .toList();
-
-        s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                .bucket(bucket)
-                .delete(Delete.builder().objects(objectsToDelete).build())
-                .build());
     }
 
     @Override
     public List<String> list(String remoteSrc) {
-        ListObjectsV2Response response = s3Client.listObjectsV2(ListObjectsV2Request.builder()
-                .bucket(bucket)
-                .prefix(remoteSrc)
-                .build());
+        try {
+            ListObjectsV2Response response = s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                    .bucket(bucket)
+                    .prefix(remoteSrc)
+                    .build());
 
-        return response.contents().stream()
-                .map(S3Object::key)
-                .collect(Collectors.toList());
+            return response.contents().stream()
+                    .map(S3Object::key)
+                    .collect(Collectors.toList());
+        } catch (S3Exception e) {
+            throw new BucketOperationException(
+                    "AWS S3 error while listing files with prefix " + remoteSrc, e);
+        }
     }
 
     @Override
@@ -172,19 +208,7 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateExpiration(expirationTime);
 
-        String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
-        String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
-
-        if (accessKey == null || secretKey == null) {
-            throw new IllegalStateException("AWS credentials are not set in environment variables");
-        }
-
-        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
-
-        try (S3Presigner presigner = S3Presigner.builder()
-                .region(Region.of(resolveRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                .build()) {
+        try (S3Presigner presigner = presignerSupplier.get()) {
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucket)
@@ -227,6 +251,23 @@ public class AwsAdapterImpl implements BucketAdapter {
 
         return S3Client.builder()
                 .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .build();
+    }
+
+    /**
+     * Create S3 presigner with resolved region and default credentials provider.
+     * 
+     * @return S3 presigner
+     */
+    private static S3Presigner createS3Presigner() {
+        String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
+        String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
+
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
+
+        return S3Presigner.builder()
+                .region(Region.of(resolveRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
                 .build();
     }
