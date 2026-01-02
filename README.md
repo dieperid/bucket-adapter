@@ -190,9 +190,36 @@ docker cp ./data/file1.txt bucketadapter:/app/file1.txt
 
 ### How to use the application ?
 
-To use the API you can read this [documentation](docs/api-documentation.md).
+#### API
 
-You can also find the [online documentation](https://dieperid.github.io/bucket-adapter/) using Redoc to publish the API documentation.
+1. To use the API you can read this [documentation](docs/api-documentation.md).
+2. You can also find the [online documentation](https://dieperid.github.io/bucket-adapter/) using Redoc to publish the API documentation.
+
+**How to update the API documentation ?**
+
+To update the documentation, first you'll have to start run the project using **maven** or **docker** :
+
+```bash
+# Maven
+./mvnw spring-boot:run
+
+# Docker
+docker compose up --build
+```
+
+When your app is running, you'll be able generate the API documentaion in `json` format or `yaml` format.
+
+> Note : Redoc use the `yaml` format to display the API documentation in web interface
+
+To generate run one if these command :
+
+```bash
+# JSON format
+curl http://localhost:8080/v3/api-docs > docs/openapi.json
+
+# YAML format
+curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
+```
 
 ## Directory structure
 
