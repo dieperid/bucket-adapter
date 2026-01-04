@@ -57,3 +57,4 @@ jobs:
             --file Dockerfile \
             --tag bucket-adapter:latest \
             --progress=plain \
+            .
