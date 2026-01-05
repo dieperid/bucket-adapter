@@ -80,3 +80,4 @@ docs/html
 
 ### Project specific ###
 data/
+gcp-credentials.json
