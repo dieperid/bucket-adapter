@@ -11,6 +11,7 @@ services:
       - ./src:/app/src
       - ./pom.xml:/app/pom.xml
       - ./data:/app/data
+      - ./gcp-credentials.json:/gcp-credentials.json:ro
     env_file:
       - .env
     environment:
