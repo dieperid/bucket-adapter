@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.bucketadapter.exception.BucketOperationException;
+import com.example.bucketadapter.exception.InvalidBucketPathException;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.*;
 
@@ -52,6 +55,80 @@ public class GcpAdapterImplTest {
     // ------------------------------------------------------------------
     // Upload method tests
     // ------------------------------------------------------------------
+
+    @Test
+    void upload_shouldCallStorageCreate_whenFileIsValid() throws Exception {
+        // Given
+        String remotePath = "dir/file.txt";
+        Path tempFile = Files.createTempFile("testfile", ".txt");
+        Files.writeString(tempFile, "dummy content");
+
+        // When
+        adapter.upload(tempFile.toString(), remotePath);
+
+        // Then
+        verify(storage).create(
+                any(BlobInfo.class),
+                eq(Files.readAllBytes(tempFile)));
+
+        // Cleanup
+        Files.deleteIfExists(tempFile);
+    }
+
+    @Test
+    void upload_shouldThrowInvalidBucketPathException_whenFileDoesNotExist() {
+        // Given
+        String missingFile = "/path/to/local/missing.txt";
+        String remotePath = "dir/file.txt";
+
+        // When / Then
+        InvalidBucketPathException ex = assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.upload(missingFile, remotePath));
+
+        // Then
+        assertTrue(ex.getMessage().contains("does not exist"));
+        verify(storage, org.mockito.Mockito.never()).create(any(BlobInfo.class), any());
+    }
+
+    @Test
+    void upload_shouldThrowInvalidBucketPathException_whenLocalPathIsDirectory() throws Exception {
+        // Given
+        Path tempDir = Files.createTempDirectory("tempDir");
+        String remotePath = "dir/file.txt";
+
+        // When / Then
+        InvalidBucketPathException ex = assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.upload(tempDir.toString(), remotePath));
+
+        // Then
+        assertTrue(ex.getMessage().contains("does not exist"));
+        verify(storage, org.mockito.Mockito.never()).create(any(BlobInfo.class), any());
+
+        // Cleanup
+        Files.deleteIfExists(tempDir);
+    }
+
+    @Test
+    void upload_shouldThrowBucketOperationException_whenGcpFails() throws Exception {
+        // Given
+        Path tempFile = Files.createTempFile("testfile", ".txt");
+        Files.writeString(tempFile, "dummy content");
+        String remotePath = "dir/file.txt";
+
+        when(storage.create(any(BlobInfo.class), any())).thenThrow(new RuntimeException("GCP failure"));
+
+        // When / Then
+        BucketOperationException ex = assertThrows(
+                BucketOperationException.class,
+                () -> adapter.upload(tempFile.toString(), remotePath));
+
+        assertTrue(ex.getMessage().contains("GCP error"));
+
+        // Cleanup
+        Files.deleteIfExists(tempFile);
+    }
 
     // ------------------------------------------------------------------
     // List method tests
