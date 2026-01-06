@@ -49,13 +49,13 @@ public class GcpAdapterImpl implements BucketAdapter {
 
     @Override
     public void upload(final String localSrc, final String remoteSrc) {
-        try {
-            File file = new File(localSrc);
-            if (!file.exists() || !file.isFile()) {
-                throw new InvalidBucketPathException(
-                        "Local file does not exist: " + localSrc);
-            }
+        File file = new File(localSrc);
+        if (!file.exists() || !file.isFile()) {
+            throw new InvalidBucketPathException(
+                    "Local file does not exist: " + localSrc);
+        }
 
+        try {
             BlobId blobId = BlobId.of(bucket, remoteSrc);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
 
