@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
 import com.google.api.gax.paging.Page;
@@ -128,6 +131,66 @@ public class GcpAdapterImplTest {
 
         // Cleanup
         Files.deleteIfExists(tempFile);
+    }
+
+    // ------------------------------------------------------------------
+    // Download method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void download_shouldWriteFile_whenObjectExists() throws Exception {
+        // Given
+        String remoteSrc = "dir/file.txt";
+        String localSrc = "/tmp/localFile.txt";
+
+        when(storage.get(BUCKET, remoteSrc)).thenReturn(blob1);
+
+        // Mock downloadTo pour ne rien faire
+        doNothing().when(blob1).downloadTo(Path.of(localSrc));
+
+        // When
+        adapter.download(localSrc, remoteSrc);
+
+        // Then
+        verify(storage).get(BUCKET, remoteSrc);
+        verify(blob1).downloadTo(Path.of(localSrc));
+    }
+
+    @Test
+    void download_shouldThrowBucketObjectNotFoundException_whenObjectDoesNotExist() {
+        // Given
+        String remoteSrc = "missing/file.txt";
+        String localSrc = "/tmp/localFile.txt";
+
+        when(storage.get(BUCKET, remoteSrc)).thenReturn(null);
+
+        // When / Then
+        BucketObjectNotFoundException ex = assertThrows(
+                BucketObjectNotFoundException.class,
+                () -> adapter.download(localSrc, remoteSrc));
+
+        assertTrue(ex.getMessage().contains(remoteSrc));
+        verify(storage).get(BUCKET, remoteSrc);
+    }
+
+    @Test
+    void download_shouldThrowBucketOperationException_whenGcpFails() throws Exception {
+        // Given
+        String remoteSrc = "dir/file.txt";
+        String localSrc = "/tmp/localFile.txt";
+
+        when(storage.get(BUCKET, remoteSrc)).thenReturn(blob1);
+        doThrow(new RuntimeException("GCP download failure"))
+                .when(blob1).downloadTo(Path.of(localSrc));
+
+        // When / Then
+        BucketOperationException ex = assertThrows(
+                BucketOperationException.class,
+                () -> adapter.download(localSrc, remoteSrc));
+
+        assertTrue(ex.getMessage().contains("GCP error while downloading"));
+        verify(storage).get(BUCKET, remoteSrc);
+        verify(blob1).downloadTo(Path.of(localSrc));
     }
 
     // ------------------------------------------------------------------
