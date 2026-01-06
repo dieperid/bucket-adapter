@@ -11,6 +11,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -191,6 +192,51 @@ public class GcpAdapterImplTest {
         assertTrue(ex.getMessage().contains("GCP error while downloading"));
         verify(storage).get(BUCKET, remoteSrc);
         verify(blob1).downloadTo(Path.of(localSrc));
+    }
+
+    // ------------------------------------------------------------------
+    // Update method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void update_shouldDelegateToUpload_whenCalled() throws Exception {
+        // Given
+        File tempFile = File.createTempFile("test-file", ".txt");
+        tempFile.deleteOnExit();
+
+        // When
+        adapter.update(tempFile.getAbsolutePath(), "dir/file.txt");
+
+        // Then
+        verify(storage).create(any(BlobInfo.class), any(byte[].class));
+    }
+
+    @Test
+    void update_shouldThrowInvalidBucketPathException_whenFileDoesNotExist() {
+        // Given
+        String missingFile = "/path/to/local/missing.txt";
+
+        // When / Then
+        assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.update(missingFile, "dir/file.txt"));
+    }
+
+    @Test
+    void update_shouldThrowBucketOperationException_whenGcpFails() throws Exception {
+        // Given
+        File tempFile = File.createTempFile("test-file", ".txt");
+        tempFile.deleteOnExit();
+
+        doThrow(new RuntimeException("GCP failure"))
+                .when(storage).create(any(BlobInfo.class), any(byte[].class));
+
+        // When / Then
+        BucketOperationException ex = assertThrows(
+                BucketOperationException.class,
+                () -> adapter.update(tempFile.getAbsolutePath(), "dir/file.txt"));
+
+        assertTrue(ex.getMessage().contains("GCP error while uploading file"));
     }
 
     // ------------------------------------------------------------------
