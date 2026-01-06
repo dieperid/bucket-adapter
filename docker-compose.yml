@@ -4,7 +4,12 @@ services:
   bucket-adapter:
     build:
       context: .
-      dockerfile: Dockerfile
+    image: bi-bucket-adapter:latest
+    env_file:
+      - .env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp-credentials.json # OVERRIDE .env to use copied gcp cred. 
+      - AWS_SHARED_CREDENTIALS_FILE=/.aws/credentials # OVERRIDE .env to use copied aws cred. Remove those lines if you want to specify auth settings in the .env file 
     ports:
       - "8080:8080"
     volumes:
@@ -12,8 +17,5 @@ services:
       - ./pom.xml:/app/pom.xml
       - ./data:/app/data
       - ./gcp-credentials.json:/gcp-credentials.json:ro
-    env_file:
-      - .env
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
+      - /home/ddieperi/.aws/credentials:/.aws/credentials:ro
     restart: unless-stopped
