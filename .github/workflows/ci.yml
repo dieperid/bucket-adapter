@@ -1,4 +1,4 @@
-name: CI - Lint, SpotBugs, Tests & Docker Build
+name: CI - Lint, SpotBugs & Tests
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ jobs:
           java-version: 21
           cache: maven
       - name: Run linter (Checkstyle)
-        run: ./mvnw checkstyle:check
+        run: mvn checkstyle:check
         continue-on-error: true
 
   spotbugs:
@@ -31,7 +31,7 @@ jobs:
           java-version: 21
           cache: maven
       - name: Run SpotBugs
-        run: ./mvnw spotbugs:check
+        run: mvn spotbugs:check
 
   test:
     name: Run Tests
@@ -45,4 +45,4 @@ jobs:
           java-version: 21
           cache: maven
       - name: Run tests
-        run: ./mvnw test
+        run: mvn test
