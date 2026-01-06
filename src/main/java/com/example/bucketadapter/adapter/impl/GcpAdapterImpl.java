@@ -69,12 +69,12 @@ public class GcpAdapterImpl implements BucketAdapter {
 
     @Override
     public void download(final String localSrc, final String remoteSrc) {
-        try {
-            Blob blob = storage.get(bucket, remoteSrc);
-            if (blob == null) {
-                throw new BucketObjectNotFoundException(remoteSrc);
-            }
+        Blob blob = storage.get(bucket, remoteSrc);
+        if (blob == null) {
+            throw new BucketObjectNotFoundException(remoteSrc);
+        }
 
+        try {
             blob.downloadTo(Path.of(localSrc));
 
         } catch (Exception e) {
