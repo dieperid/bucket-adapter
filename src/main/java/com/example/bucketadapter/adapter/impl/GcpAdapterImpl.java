@@ -47,19 +47,56 @@ public class GcpAdapterImpl implements BucketAdapter {
         this.bucket = bucket;
     }
 
+    /**
+     * Resolves and validates a local filesystem path provided by the caller.
+     * The resulting path is constrained to lie within a dedicated base directory,
+     * preventing directory traversal and access to unexpected locations.
+     *
+     * @param localSrc the user-provided local path
+     * @return a normalized, absolute path within the allowed base directory
+     * @throws InvalidBucketPathException if the path is invalid or outside the base
+     *                                    directory
+     */
+    private Path resolveAndValidateLocalPath(final String localSrc) {
+        if (localSrc == null || localSrc.isBlank()) {
+            throw new InvalidBucketPathException("Local path must not be empty");
+        }
+
+        // Define a base directory for all local file operations.
+        // This can be adjusted or externalized as needed.
+        Path baseDir = Paths.get(".").toAbsolutePath().normalize();
+
+        // Disallow absolute paths directly provided by the caller to avoid
+        // bypassing the base directory restriction.
+        Path userPath = Paths.get(localSrc);
+        if (userPath.isAbsolute()) {
+            throw new InvalidBucketPathException("Absolute local paths are not allowed");
+        }
+
+        Path resolvedPath = baseDir.resolve(userPath).normalize();
+
+        // Ensure the resolved path is still within the base directory.
+        if (!resolvedPath.startsWith(baseDir)) {
+            throw new InvalidBucketPathException("Local path is outside the allowed directory");
+        }
+
+        return resolvedPath;
+    }
+
     @Override
     public void upload(final String localSrc, final String remoteSrc) {
-        File file = new File(localSrc);
+        Path resolvedPath = resolveAndValidateLocalPath(localSrc);
+        File file = resolvedPath.toFile();
         if (!file.exists() || !file.isFile()) {
             throw new InvalidBucketPathException(
-                    "Local file does not exist: " + localSrc);
+                    "Local file does not exist: " + resolvedPath);
         }
 
         try {
             BlobId blobId = BlobId.of(bucket, remoteSrc);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
 
-            storage.create(blobInfo, java.nio.file.Files.readAllBytes(file.toPath()));
+            storage.create(blobInfo, java.nio.file.Files.readAllBytes(resolvedPath));
 
         } catch (Exception e) {
             throw new BucketOperationException(
@@ -75,7 +112,12 @@ public class GcpAdapterImpl implements BucketAdapter {
         }
 
         try {
-            blob.downloadTo(Path.of(localSrc));
+            Path targetPath = resolveAndValidateLocalPath(localSrc);
+            Path parent = targetPath.getParent();
+            if (parent != null && !Files.exists(parent)) {
+                Files.createDirectories(parent);
+            }
+            blob.downloadTo(targetPath);
 
         } catch (Exception e) {
             throw new BucketOperationException(
