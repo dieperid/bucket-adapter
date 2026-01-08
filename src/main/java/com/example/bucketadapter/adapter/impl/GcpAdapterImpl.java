@@ -119,6 +119,8 @@ public class GcpAdapterImpl implements BucketAdapter {
 
             storage.delete(toDelete);
 
+        } catch (InvalidBucketPathException | BucketObjectNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while deleting file(s) at " + remoteSrc, e);
