@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -16,9 +17,12 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -354,5 +358,81 @@ public class GcpAdapterImplTest {
 
         assertTrue(ex.getMessage().contains("GCP error"));
         verify(storage).get(BUCKET, "dir/file.txt");
+    }
+
+    // ------------------------------------------------------------------
+    // share method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void share_shouldReturnSignedUrl_whenInputsAreValid() throws Exception {
+        // Given
+        String remoteSrc = "dir/file.txt";
+        int expiration = 3600;
+
+        URL signedUrl = URI.create(
+                "https://storage.googleapis.com/test-bucket/dir/file.txt?X-Goog-Signature=abc").toURL();
+
+        when(storage.signUrl(
+                any(BlobInfo.class),
+                eq((long) expiration),
+                eq(TimeUnit.SECONDS),
+                any(Storage.SignUrlOption.class))).thenReturn(signedUrl);
+
+        // When
+        String result = adapter.share(remoteSrc, expiration);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.contains("X-Goog-Signature"));
+
+        verify(storage).signUrl(
+                any(BlobInfo.class),
+                eq((long) expiration),
+                eq(TimeUnit.SECONDS),
+                any(Storage.SignUrlOption.class));
+    }
+
+    @Test
+    void share_shouldThrowInvalidBucketPathException_whenRemoteSrcIsNull() {
+        // When / Then
+        assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.share(null, 3600));
+
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void share_shouldThrowInvalidBucketPathException_whenExpirationIsInvalid() {
+        // When / Then
+        assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.share("dir/file.txt", 0));
+
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void share_shouldThrowBucketOperationException_whenGcpFails() {
+        // Given
+        when(storage.signUrl(
+                any(BlobInfo.class),
+                anyLong(),
+                any(TimeUnit.class),
+                any(Storage.SignUrlOption.class))).thenThrow(new RuntimeException("GCP failure"));
+
+        // When / Then
+        BucketOperationException ex = assertThrows(
+                BucketOperationException.class,
+                () -> adapter.share("dir/file.txt", 3600));
+
+        assertTrue(ex.getMessage().contains("GCP error"));
+
+        verify(storage).signUrl(
+                any(BlobInfo.class),
+                anyLong(),
+                any(TimeUnit.class),
+                any(Storage.SignUrlOption.class));
     }
 }
