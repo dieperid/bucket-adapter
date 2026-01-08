@@ -145,7 +145,14 @@ public class GcpAdapterImpl implements BucketAdapter {
     @Override
     public boolean doesExists(final String remoteSrc) {
         validateRemoteSrc(remoteSrc);
-        return storage.get(bucket, remoteSrc) != null;
+
+        try {
+            return storage.get(bucket, remoteSrc) != null;
+        } catch (Exception e) {
+            throw new BucketOperationException(
+                    "GCP error while checking existence of " + remoteSrc,
+                    e);
+        }
     }
 
     @Override
