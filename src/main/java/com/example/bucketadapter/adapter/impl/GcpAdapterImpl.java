@@ -49,18 +49,20 @@ public class GcpAdapterImpl implements BucketAdapter {
 
     @Override
     public void upload(final String localSrc, final String remoteSrc) {
-        File file = new File(localSrc);
-        if (!file.exists() || !file.isFile()) {
-            throw new InvalidBucketPathException(
-                    "Local file does not exist: " + localSrc);
-        }
-
         try {
+            File file = new File(localSrc);
+            if (!file.exists() || !file.isFile()) {
+                throw new InvalidBucketPathException(
+                        "Local file does not exist: " + localSrc);
+            }
+
             BlobId blobId = BlobId.of(bucket, remoteSrc);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
 
             storage.create(blobInfo, java.nio.file.Files.readAllBytes(file.toPath()));
 
+        } catch (InvalidBucketPathException e) {
+            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while uploading file to " + remoteSrc, e);
@@ -69,14 +71,16 @@ public class GcpAdapterImpl implements BucketAdapter {
 
     @Override
     public void download(final String localSrc, final String remoteSrc) {
-        Blob blob = storage.get(bucket, remoteSrc);
-        if (blob == null) {
-            throw new BucketObjectNotFoundException(remoteSrc);
-        }
-
         try {
-            blob.downloadTo(Path.of(localSrc));
+            Blob blob = storage.get(bucket, remoteSrc);
 
+            if (blob == null) {
+                throw new BucketObjectNotFoundException(remoteSrc);
+            }
+
+            blob.downloadTo(Path.of(localSrc));
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while downloading file from " + remoteSrc, e);
@@ -119,7 +123,7 @@ public class GcpAdapterImpl implements BucketAdapter {
 
             storage.delete(toDelete);
 
-        } catch (InvalidBucketPathException | BucketObjectNotFoundException e) {
+        } catch (BucketObjectNotFoundException e) {
             throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
