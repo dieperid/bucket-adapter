@@ -100,12 +100,26 @@ AWS_SECRET_ACCESS_KEY=your-secret-access-key
 Provider selection:
 
 ```bash
-PROVIDER_IMPL=AWS   # or GCP / AZURE
+PROVIDER_IMPL=AWS
 ```
 
 #### GCP configuration
 
-...
+Required variables :
+
+```bash
+GCP_PROJECT_ID=your-project-id
+GCP_BUCKET_NAME=your-bucket-name
+GOOGLE_APPLICATION_CREDENTIALS=./path-to-credentials.json
+```
+
+> Note : You'll have to put the path of your `credentials.json` file in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+
+Provider selection:
+
+```bash
+PROVIDER_IMPL=GCP
+```
 
 #### Azure configuration
 
@@ -118,7 +132,7 @@ PROVIDER_IMPL=AWS   # or GCP / AZURE
 #### Build the project
 
 ```bash
-./mvnw clean install
+mvn clean install
 ```
 
 #### Run tests
@@ -140,12 +154,22 @@ chmod +x setup-test-data.sh
 3. Run tests
 
 ```bash
-./mvnw test
+nvn test
+```
+
+4. Check for coverage
+
+```bash
+# Generate coverage report
+mvn jacoco:report
+
+# Show coverage report
+php -S localhost:8000 -t target/site/jacoco
 ```
 
 #### Run the application
 ```bash
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
 ### On integration environment
@@ -157,35 +181,17 @@ chmod +x setup-test-data.sh
 chmod +x mvnw
 
 # Clean and compile, skip tests
-./mvnw clean package -DskipTests
+mvn clean package -DskipTests
 
 # (Optional) Run tests
-./mvnw test
+mvn test
 ```
 
 #### Docker build & run
 
 ```bash
-# Build Docker image (multi-stage)
-docker build -t bucketadapter:latest .
-
-# Run the container exposing port 8080
-docker run -d -p 8080:8080 --name bucketadapter bucketadapter:latest
-```
-
-If you want to try the API on integration environment you'll have to run the container with a volume : 
-
-```bash
-docker run -d -p 8080:8080 \
-  -v $(pwd)/data:/app/data \
-  --name bucketadapter bucketadapter:latest
-```
-
-Or you can copy a local file into the container :
-
-```bash
-# Syntax: docker cp <local-path> <container-name>:<container-path>
-docker cp ./data/file1.txt bucketadapter:/app/file1.txt
+# Build Docker image
+docker compose up --build
 ```
 
 ### How to use the application ?
@@ -201,7 +207,7 @@ To update the documentation, first you'll have to start run the project using **
 
 ```bash
 # Maven
-./mvnw spring-boot:run
+mvn spring-boot:run
 
 # Docker
 docker compose up --build

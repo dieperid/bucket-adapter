@@ -47,56 +47,22 @@ public class GcpAdapterImpl implements BucketAdapter {
         this.bucket = bucket;
     }
 
-    /**
-     * Resolves and validates a local filesystem path provided by the caller.
-     * The resulting path is constrained to lie within a dedicated base directory,
-     * preventing directory traversal and access to unexpected locations.
-     *
-     * @param localSrc the user-provided local path
-     * @return a normalized, absolute path within the allowed base directory
-     * @throws InvalidBucketPathException if the path is invalid or outside the base directory
-     */
-    private Path resolveAndValidateLocalPath(final String localSrc) {
-        if (localSrc == null || localSrc.isBlank()) {
-            throw new InvalidBucketPathException("Local path must not be empty");
-        }
-
-        // Define a base directory for all local file operations.
-        // This can be adjusted or externalized as needed.
-        Path baseDir = Paths.get(".").toAbsolutePath().normalize();
-
-        // Disallow absolute paths directly provided by the caller to avoid
-        // bypassing the base directory restriction.
-        Path userPath = Paths.get(localSrc);
-        if (userPath.isAbsolute()) {
-            throw new InvalidBucketPathException("Absolute local paths are not allowed");
-        }
-
-        Path resolvedPath = baseDir.resolve(userPath).normalize();
-
-        // Ensure the resolved path is still within the base directory.
-        if (!resolvedPath.startsWith(baseDir)) {
-            throw new InvalidBucketPathException("Local path is outside the allowed directory");
-        }
-
-        return resolvedPath;
-    }
-
     @Override
     public void upload(final String localSrc, final String remoteSrc) {
         try {
-            Path resolvedPath = resolveAndValidateLocalPath(localSrc);
-            File file = resolvedPath.toFile();
+            File file = new File(localSrc);
             if (!file.exists() || !file.isFile()) {
                 throw new InvalidBucketPathException(
-                        "Local file does not exist: " + resolvedPath);
+                        "Local file does not exist: " + localSrc);
             }
 
             BlobId blobId = BlobId.of(bucket, remoteSrc);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
 
-            storage.create(blobInfo, java.nio.file.Files.readAllBytes(resolvedPath));
+            storage.create(blobInfo, java.nio.file.Files.readAllBytes(file.toPath()));
 
+        } catch (InvalidBucketPathException e) {
+            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while uploading file to " + remoteSrc, e);
@@ -107,18 +73,14 @@ public class GcpAdapterImpl implements BucketAdapter {
     public void download(final String localSrc, final String remoteSrc) {
         try {
             Blob blob = storage.get(bucket, remoteSrc);
+
             if (blob == null) {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
-            Path targetPath = resolveAndValidateLocalPath(localSrc);
-            Path parent = targetPath.getParent();
-            if (parent != null && !Files.exists(parent)) {
-                Files.createDirectories(parent);
-            }
-            blob.downloadTo(targetPath);
-
-
+            blob.downloadTo(Path.of(localSrc));
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while downloading file from " + remoteSrc, e);
@@ -161,6 +123,8 @@ public class GcpAdapterImpl implements BucketAdapter {
 
             storage.delete(toDelete);
 
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while deleting file(s) at " + remoteSrc, e);
@@ -187,7 +151,14 @@ public class GcpAdapterImpl implements BucketAdapter {
     @Override
     public boolean doesExists(final String remoteSrc) {
         validateRemoteSrc(remoteSrc);
-        return storage.get(bucket, remoteSrc) != null;
+
+        try {
+            return storage.get(bucket, remoteSrc) != null;
+        } catch (Exception e) {
+            throw new BucketOperationException(
+                    "GCP error while checking existence of " + remoteSrc,
+                    e);
+        }
     }
 
     @Override
