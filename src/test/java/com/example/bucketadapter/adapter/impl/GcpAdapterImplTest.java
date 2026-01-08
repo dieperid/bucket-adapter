@@ -247,6 +247,124 @@ public class GcpAdapterImplTest {
     }
 
     // ------------------------------------------------------------------
+    // Delete method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void delete_shouldDeleteSingleObject_whenRecursiveIsFalse() {
+        // Given
+        when(storage.delete(BUCKET, "dir/file.txt")).thenReturn(true);
+
+        // When
+        adapter.delete("dir/file.txt", false);
+
+        // Then
+        verify(storage).delete(BUCKET, "dir/file.txt");
+    }
+
+    @Test
+    void delete_shouldDeleteAllObjects_whenRecursiveIsTrue() {
+        // Given
+        Blob blob1 = mock(Blob.class);
+        Blob blob2 = mock(Blob.class);
+
+        when(blob1.getBlobId()).thenReturn(BlobId.of(BUCKET, "dir/file1.txt"));
+        when(blob2.getBlobId()).thenReturn(BlobId.of(BUCKET, "dir/sub/file2.txt"));
+
+        @SuppressWarnings("unchecked")
+        Page<Blob> page = mock(Page.class);
+        when(page.iterateAll()).thenReturn(List.of(blob1, blob2));
+
+        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class)))
+                .thenReturn(page);
+
+        // When
+        adapter.delete("dir", true);
+
+        // Then
+        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
+        verify(storage).delete(
+                List.of(
+                        BlobId.of(BUCKET, "dir/file1.txt"),
+                        BlobId.of(BUCKET, "dir/sub/file2.txt")));
+    }
+
+    @Test
+    void delete_shouldThrowInvalidBucketPathException_whenRemoteSrcIsNull() {
+        // When / Then
+        assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.delete(null, false));
+
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void delete_shouldThrowInvalidBucketPathException_whenDeletingRoot() {
+        // When / Then
+        assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.delete("/", false));
+
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void delete_shouldThrowBucketObjectNotFoundException_whenObjectDoesNotExist_simple() {
+        // Given
+        when(storage.delete(BUCKET, "missing/file.txt")).thenReturn(false);
+
+        // When / Then
+        assertThrows(
+                BucketObjectNotFoundException.class,
+                () -> adapter.delete("missing/file.txt", false));
+
+        verify(storage).delete(BUCKET, "missing/file.txt");
+    }
+
+    @Test
+    void delete_shouldThrowBucketObjectNotFoundException_whenNoObjectsFound_recursive() {
+        // Given
+        @SuppressWarnings("unchecked")
+        Page<Blob> emptyPage = mock(Page.class);
+        when(emptyPage.iterateAll()).thenReturn(List.of());
+
+        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class)))
+                .thenReturn(emptyPage);
+
+        // When / Then
+        assertThrows(
+                BucketObjectNotFoundException.class,
+                () -> adapter.delete("empty", true));
+
+        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
+    }
+
+    @Test
+    void delete_shouldThrowBucketOperationException_whenGcpDeleteFails() {
+        // Given
+        when(storage.delete(BUCKET, "dir/file.txt"))
+                .thenThrow(new RuntimeException("GCP failure"));
+
+        // When / Then
+        assertThrows(
+                BucketOperationException.class,
+                () -> adapter.delete("dir/file.txt", false));
+    }
+
+    @Test
+    void delete_shouldThrowBucketOperationException_whenGcpListFails() {
+        // Given
+        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class)))
+                .thenThrow(new RuntimeException("GCP failure"));
+
+        // When / Then
+        assertThrows(
+                BucketOperationException.class,
+                () -> adapter.delete("dir", true));
+    }
+
+    // ------------------------------------------------------------------
     // List method tests
     // ------------------------------------------------------------------
 
