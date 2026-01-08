@@ -1,6 +1,7 @@
 package com.example.bucketadapter.adapter.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,7 +9,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -295,5 +298,61 @@ public class GcpAdapterImplTest {
                 ex.getMessage().contains("GCP error"));
 
         verify(storage).list(eq(BUCKET), any());
+    }
+
+    // ------------------------------------------------------------------
+    // doesExists method tests
+    // ------------------------------------------------------------------
+
+    @Test
+    void doesExists_shouldReturnTrue_whenObjectExists() {
+        // Given
+        Blob blob = mock(Blob.class);
+        when(storage.get(BUCKET, "dir/file.txt")).thenReturn(blob);
+
+        // When
+        boolean exists = adapter.doesExists("dir/file.txt");
+
+        // Then
+        assertTrue(exists);
+        verify(storage).get(BUCKET, "dir/file.txt");
+    }
+
+    @Test
+    void doesExists_shouldReturnFalse_whenObjectDoesNotExist() {
+        // Given
+        when(storage.get(BUCKET, "dir/missing.txt")).thenReturn(null);
+
+        // When
+        boolean exists = adapter.doesExists("dir/missing.txt");
+
+        // Then
+        assertFalse(exists);
+        verify(storage).get(BUCKET, "dir/missing.txt");
+    }
+
+    @Test
+    void doesExists_shouldThrowInvalidBucketPathException_whenRemoteSrcIsNull() {
+        // When / Then
+        assertThrows(
+                InvalidBucketPathException.class,
+                () -> adapter.doesExists(null));
+
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void doesExists_shouldThrowBucketOperationException_whenGcpFails() {
+        // Given
+        when(storage.get(BUCKET, "dir/file.txt"))
+                .thenThrow(new RuntimeException("GCP failure"));
+
+        // When / Then
+        BucketOperationException ex = assertThrows(
+                BucketOperationException.class,
+                () -> adapter.doesExists("dir/file.txt"));
+
+        assertTrue(ex.getMessage().contains("GCP error"));
+        verify(storage).get(BUCKET, "dir/file.txt");
     }
 }
