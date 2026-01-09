@@ -91,7 +91,6 @@ SERVER_PORT=8080
 Required variables:
 
 ```bash
-AWS_BUCKET_NAME=your-bucket-name
 AWS_REGION=your-region
 AWS_ACCESS_KEY_ID=your-access-key-id
 AWS_SECRET_ACCESS_KEY=your-secret-access-key
@@ -109,7 +108,6 @@ Required variables :
 
 ```bash
 GCP_PROJECT_ID=your-project-id
-GCP_BUCKET_NAME=your-bucket-name
 GOOGLE_APPLICATION_CREDENTIALS=./path-to-credentials.json
 ```
 
