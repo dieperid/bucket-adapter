@@ -68,8 +68,6 @@ public class AwsAdapterImplTest {
 
     private AutoCloseable closeable;
 
-    private final String bucketName = "test-bucket";
-
     private Path tempFile;
 
     private Path tempDirectory;
@@ -79,7 +77,7 @@ public class AwsAdapterImplTest {
     @BeforeEach
     void setUp() throws IOException {
         closeable = MockitoAnnotations.openMocks(this);
-        adapter = new AwsAdapterImpl(s3Client, bucketName, presignerSupplier);
+        adapter = new AwsAdapterImpl(s3Client, presignerSupplier);
 
         tempFile = Files.createTempFile("upload-test-", ".txt");
         Files.writeString(tempFile, "test content");
@@ -101,14 +99,14 @@ public class AwsAdapterImplTest {
     @Test
     void upload_shouldUploadFile_whenFileIsValid() {
         // given
-        String remoteSrc = "dir/file.txt";
+        String remoteSrc = "test-bucket/dir/file.txt";
 
         // when / then
         assertDoesNotThrow(() -> adapter.upload(tempFile.toString(), remoteSrc));
 
         verify(s3Client, times(1)).putObject(
-                argThat((PutObjectRequest req) -> req.bucket().equals(bucketName)
-                        && req.key().equals(remoteSrc)),
+                argThat((PutObjectRequest req) -> req.bucket().equals("test-bucket")
+                        && req.key().equals("dir/file.txt")),
                 any(RequestBody.class));
     }
 
@@ -169,7 +167,7 @@ public class AwsAdapterImplTest {
     @Test
     void download_shouldDownloadFile_whenObjectExists() {
         // given
-        String remoteSrc = "dir/file.txt";
+        String remoteSrc = "test-bucket/dir/file.txt";
         String localSrc = "/tmp/file.txt";
 
         when(s3Client.headObject(any(HeadObjectRequest.class)))
@@ -184,8 +182,8 @@ public class AwsAdapterImplTest {
 
         verify(s3Client, times(1))
                 .getObject(
-                        argThat((GetObjectRequest req) -> req.bucket().equals(bucketName)
-                                && req.key().equals(remoteSrc)),
+                        argThat((GetObjectRequest req) -> req.bucket().equals("test-bucket")
+                                && req.key().equals("dir/file.txt")),
                         eq(Path.of(localSrc)));
     }
 

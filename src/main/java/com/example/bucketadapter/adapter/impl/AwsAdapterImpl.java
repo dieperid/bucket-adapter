@@ -10,6 +10,13 @@ import com.example.bucketadapter.adapter.BucketAdapter;
 import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
+import com.example.bucketadapter.helper.AdapterHelper;
+
+import static com.example.bucketadapter.helper.ConfigHelper.getConfig;
+import static com.example.bucketadapter.helper.AdapterHelper.validateExpiration;
+import static com.example.bucketadapter.helper.AdapterHelper.validateNotRoot;
+import static com.example.bucketadapter.helper.AdapterHelper.validateRemoteSrc;
+import static com.example.bucketadapter.helper.AdapterHelper.BucketSrc;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -32,13 +39,11 @@ import java.util.stream.Collectors;
 public class AwsAdapterImpl implements BucketAdapter {
 
     private final S3Client s3Client;
-    private final String bucket;
     private final Supplier<S3Presigner> presignerSupplier;
 
     public AwsAdapterImpl() {
         this(
                 createS3Client(),
-                resolveBucketName(),
                 AwsAdapterImpl::createS3Presigner);
     }
 
@@ -48,15 +53,15 @@ public class AwsAdapterImpl implements BucketAdapter {
      * @param s3Client - S3 client
      * @param bucket   - S3 bucket name
      */
-    AwsAdapterImpl(S3Client s3Client, String bucket, Supplier<S3Presigner> presignerSupplier) {
+    AwsAdapterImpl(S3Client s3Client, Supplier<S3Presigner> presignerSupplier) {
         this.s3Client = s3Client;
-        this.bucket = bucket;
         this.presignerSupplier = presignerSupplier;
     }
 
     @Override
     public void upload(String localSrc, String remoteSrc) {
         try {
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
 
             File file = new File(localSrc);
             if (!file.exists() || !file.isFile()) {
@@ -65,8 +70,8 @@ public class AwsAdapterImpl implements BucketAdapter {
             }
 
             s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(remoteSrc)
+                    .bucket(bucketSrc.bucket())
+                    .key(bucketSrc.key())
                     .build(),
                     RequestBody.fromFile(file));
         } catch (S3Exception e) {
@@ -77,6 +82,11 @@ public class AwsAdapterImpl implements BucketAdapter {
 
     @Override
     public void download(String localSrc, String remoteSrc) {
+        validateRemoteSrc(remoteSrc);
+
+        BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+        AdapterHelper.validateKeyRequired(bucketSrc);
+
         try {
             // First, check if the object exists
             if (!doesExists(remoteSrc)) {
@@ -84,10 +94,12 @@ public class AwsAdapterImpl implements BucketAdapter {
             }
 
             s3Client.getObject(GetObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(remoteSrc)
+                    .bucket(bucketSrc.bucket())
+                    .key(bucketSrc.key())
                     .build(),
                     Paths.get(localSrc));
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
                     "AWS S3 error while downloading file from " + remoteSrc, e);
@@ -108,10 +120,12 @@ public class AwsAdapterImpl implements BucketAdapter {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
             // Replace the existing object
             s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(remoteSrc)
+                    .bucket(bucketSrc.bucket())
+                    .key(bucketSrc.key())
                     .build(),
                     RequestBody.fromFile(new File(localSrc)));
         } catch (S3Exception e) {
@@ -125,7 +139,11 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateNotRoot(remoteSrc);
 
+        String normalizedRemoteSrc = "";
+
         try {
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
             if (!recursive) {
                 // delete a single object
                 if (!doesExists(remoteSrc)) {
@@ -133,23 +151,25 @@ public class AwsAdapterImpl implements BucketAdapter {
                 }
 
                 s3Client.deleteObject(DeleteObjectRequest.builder()
-                        .bucket(bucket)
-                        .key(remoteSrc)
+                        .bucket(bucketSrc.bucket())
+                        .key(bucketSrc.key())
                         .build());
                 return;
             }
 
+            normalizedRemoteSrc = bucketSrc.key();
+
             // recursive delete: delete all objects with prefix
-            String prefix = remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/";
+            String prefix = normalizedRemoteSrc.endsWith("/") ? normalizedRemoteSrc : normalizedRemoteSrc + "/";
 
             ListObjectsV2Response listResponse = s3Client.listObjectsV2(
                     ListObjectsV2Request.builder()
-                            .bucket(bucket)
+                            .bucket(bucketSrc.bucket())
                             .prefix(prefix)
                             .build());
 
             if (listResponse.contents().isEmpty()) {
-                throw new BucketObjectNotFoundException(remoteSrc);
+                throw new BucketObjectNotFoundException(normalizedRemoteSrc);
             }
 
             List<ObjectIdentifier> objectsToDelete = listResponse.contents().stream()
@@ -157,21 +177,25 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .toList();
 
             s3Client.deleteObjects(DeleteObjectsRequest.builder()
-                    .bucket(bucket)
+                    .bucket(bucketSrc.bucket())
                     .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while deleting file(s) at " + remoteSrc, e);
+                    "AWS S3 error while deleting file(s) at " + normalizedRemoteSrc, e);
         }
     }
 
     @Override
     public List<String> list(String remoteSrc) {
         try {
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
             ListObjectsV2Response response = s3Client.listObjectsV2(ListObjectsV2Request.builder()
-                    .bucket(bucket)
-                    .prefix(remoteSrc)
+                    .bucket(bucketSrc.bucket())
+                    .prefix(AdapterHelper.normalizePrefix(bucketSrc.key()))
                     .build());
 
             return response.contents().stream()
@@ -188,9 +212,11 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
 
         try {
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
             s3Client.headObject(HeadObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(remoteSrc)
+                    .bucket(bucketSrc.bucket())
+                    .key(bucketSrc.key())
                     .build());
             return true;
 
@@ -209,10 +235,12 @@ public class AwsAdapterImpl implements BucketAdapter {
         validateExpiration(expirationTime);
 
         try (S3Presigner presigner = presignerSupplier.get()) {
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+            AdapterHelper.validateKeyRequired(bucketSrc);
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(remoteSrc)
+                    .bucket(bucketSrc.bucket())
+                    .key(bucketSrc.key())
                     .build();
 
             // Create presigned request
@@ -273,17 +301,6 @@ public class AwsAdapterImpl implements BucketAdapter {
     }
 
     /**
-     * Resolve S3 bucket name from system property or environment variable.
-     * 
-     * @return S3 bucket name
-     */
-    private static String resolveBucketName() {
-        return getConfig(
-                "AWS_BUCKET_NAME",
-                "S3 bucket name");
-    }
-
-    /**
      * Resolve AWS S3 region from system property or environment variable.
      * 
      * @return AWS S3 region
@@ -292,65 +309,5 @@ public class AwsAdapterImpl implements BucketAdapter {
         return getConfig(
                 "AWS_REGION",
                 "S3 region");
-    }
-
-    /**
-     * Utility method to get configuration from system property or environment
-     * variable.
-     * 
-     * @param envVar     - environment variable name
-     * @param configName - configuration descriptive name
-     * @return configuration value
-     */
-    private static String getConfig(String envVar, String configName) {
-        // 1. FIRST: Check Docker/container environment variables (highest priority)
-        String value = System.getenv(envVar);
-
-        // 2. SECOND: Check system properties (set by DotenvInitializer from .env)
-        if (value == null || value.isBlank()) {
-            value = System.getProperty(envVar); // AWS_BUCKET_NAME
-        }
-
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException(
-                    configName + " is not configured.\n" +
-                            "When running locally: Add to .env file as " + envVar + "=value\n" +
-                            "When running in Docker: Set environment variable " + envVar);
-        }
-        return value;
-    }
-
-    /**
-     * Validate that remoteSrc exists
-     * 
-     * @param remoteSrc
-     */
-    private void validateRemoteSrc(String remoteSrc) {
-        if (remoteSrc == null || remoteSrc.isBlank()) {
-            throw new InvalidBucketPathException("remoteSrc must not be null or empty");
-        }
-    }
-
-    /**
-     * Valide that remoteSrc is not root folder
-     * 
-     * @param remoteSrc
-     */
-    private void validateNotRoot(String remoteSrc) {
-        if ("/".equals(remoteSrc)) {
-            throw new InvalidBucketPathException("Root path '/' is forbidden");
-        }
-    }
-
-    /**
-     * Valide expiration time
-     * 
-     * @param expirationTime
-     */
-    private void validateExpiration(int expirationTime) {
-        if (expirationTime <= 0 || expirationTime > 7 * 24 * 3600) {
-            throw new InvalidBucketPathException(
-                    "expirationTime must be between 1 second and 7 days");
-        }
     }
 }
