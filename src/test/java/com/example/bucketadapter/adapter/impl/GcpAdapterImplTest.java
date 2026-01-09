@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -60,7 +61,7 @@ public class GcpAdapterImplTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        adapter = new GcpAdapterImpl(storage, BUCKET);
+        adapter = new GcpAdapterImpl(storage);
     }
 
     // ------------------------------------------------------------------
@@ -70,7 +71,7 @@ public class GcpAdapterImplTest {
     @Test
     void upload_shouldCallStorageCreate_whenFileIsValid() throws Exception {
         // Given
-        String remotePath = "dir/file.txt";
+        String remotePath = "test-bucket/dir/file.txt";
         Path tempFile = Files.createTempFile("testfile", ".txt");
         Files.writeString(tempFile, "dummy content");
 
@@ -90,7 +91,7 @@ public class GcpAdapterImplTest {
     void upload_shouldThrowInvalidBucketPathException_whenFileDoesNotExist() {
         // Given
         String missingFile = "/path/to/local/missing.txt";
-        String remotePath = "dir/file.txt";
+        String remotePath = "test-bucket/dir/file.txt";
 
         // When / Then
         InvalidBucketPathException ex = assertThrows(
@@ -167,7 +168,7 @@ public class GcpAdapterImplTest {
     @Test
     void download_shouldThrowBucketObjectNotFoundException_whenObjectDoesNotExist() {
         // Given
-        String remoteSrc = "missing/file.txt";
+        String remoteSrc = "test-bucket/missing/file.txt";
         String localSrc = "/tmp/localFile.txt";
 
         when(storage.get(BUCKET, remoteSrc)).thenReturn(null);
@@ -253,13 +254,13 @@ public class GcpAdapterImplTest {
     @Test
     void delete_shouldDeleteSingleObject_whenRecursiveIsFalse() {
         // Given
-        when(storage.delete(BUCKET, "dir/file.txt")).thenReturn(true);
+        when(storage.delete(BUCKET, "file.txt")).thenReturn(true);
 
         // When
-        adapter.delete("dir/file.txt", false);
+        adapter.delete("test-bucket/file.txt", false);
 
         // Then
-        verify(storage).delete(BUCKET, "dir/file.txt");
+        verify(storage).delete(BUCKET, "file.txt");
     }
 
     @Test
@@ -275,18 +276,19 @@ public class GcpAdapterImplTest {
         Page<Blob> page = mock(Page.class);
         when(page.iterateAll()).thenReturn(List.of(blob1, blob2));
 
-        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class)))
+        when(storage.list(anyString(), any(Storage.BlobListOption.class)))
                 .thenReturn(page);
 
         // When
         adapter.delete("dir", true);
 
         // Then
-        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
-        verify(storage).delete(
+        verify(storage).list(anyString(), any(Storage.BlobListOption.class));
+
+        verify(storage).delete(eq(
                 List.of(
                         BlobId.of(BUCKET, "dir/file1.txt"),
-                        BlobId.of(BUCKET, "dir/sub/file2.txt")));
+                        BlobId.of(BUCKET, "dir/sub/file2.txt"))));
     }
 
     @Test
@@ -312,14 +314,14 @@ public class GcpAdapterImplTest {
     @Test
     void delete_shouldThrowBucketObjectNotFoundException_whenObjectDoesNotExist_simple() {
         // Given
-        when(storage.delete(BUCKET, "missing/file.txt")).thenReturn(false);
+        when(storage.delete(BUCKET, "missing-file.txt")).thenReturn(false);
 
         // When / Then
         assertThrows(
                 BucketObjectNotFoundException.class,
-                () -> adapter.delete("missing/file.txt", false));
+                () -> adapter.delete("test-bucket/missing-file.txt", false));
 
-        verify(storage).delete(BUCKET, "missing/file.txt");
+        verify(storage).delete(BUCKET, "missing-file.txt");
     }
 
     @Test
@@ -329,7 +331,7 @@ public class GcpAdapterImplTest {
         Page<Blob> emptyPage = mock(Page.class);
         when(emptyPage.iterateAll()).thenReturn(List.of());
 
-        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class)))
+        when(storage.list(anyString(), any(Storage.BlobListOption.class)))
                 .thenReturn(emptyPage);
 
         // When / Then
@@ -337,7 +339,7 @@ public class GcpAdapterImplTest {
                 BucketObjectNotFoundException.class,
                 () -> adapter.delete("empty", true));
 
-        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
+        verify(storage).list(anyString(), any(Storage.BlobListOption.class));
     }
 
     @Test
