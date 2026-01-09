@@ -158,7 +158,7 @@ public class GcpAdapterImplTest {
         doNothing().when(blob1).downloadTo(Path.of(localSrc));
 
         // When
-        adapter.download(localSrc, remoteSrc);
+        adapter.download(localSrc, BUCKET + "/" + remoteSrc);
 
         // Then
         verify(storage).get(BUCKET, remoteSrc);
@@ -168,7 +168,7 @@ public class GcpAdapterImplTest {
     @Test
     void download_shouldThrowBucketObjectNotFoundException_whenObjectDoesNotExist() {
         // Given
-        String remoteSrc = "test-bucket/missing/file.txt";
+        String remoteSrc = "missing/file.txt";
         String localSrc = "/tmp/localFile.txt";
 
         when(storage.get(BUCKET, remoteSrc)).thenReturn(null);
@@ -176,7 +176,7 @@ public class GcpAdapterImplTest {
         // When / Then
         BucketObjectNotFoundException ex = assertThrows(
                 BucketObjectNotFoundException.class,
-                () -> adapter.download(localSrc, remoteSrc));
+                () -> adapter.download(localSrc, BUCKET + "/" + remoteSrc));
 
         assertTrue(ex.getMessage().contains(remoteSrc));
         verify(storage).get(BUCKET, remoteSrc);
@@ -195,7 +195,7 @@ public class GcpAdapterImplTest {
         // When / Then
         BucketOperationException ex = assertThrows(
                 BucketOperationException.class,
-                () -> adapter.download(localSrc, remoteSrc));
+                () -> adapter.download(localSrc, BUCKET + "/" + remoteSrc));
 
         assertTrue(ex.getMessage().contains("GCP error while downloading"));
         verify(storage).get(BUCKET, remoteSrc);
@@ -377,10 +377,10 @@ public class GcpAdapterImplTest {
         when(blob2.getName()).thenReturn("dir/file2.txt");
 
         when(page.iterateAll()).thenReturn(List.of(blob1, blob2));
-        when(storage.list(eq(BUCKET), any())).thenReturn(page);
+        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
 
         // When
-        List<String> result = adapter.list("dir/");
+        List<String> result = adapter.list(BUCKET + "/" + "dir/");
 
         // Then
         assertNotNull(result);
@@ -388,40 +388,40 @@ public class GcpAdapterImplTest {
                 List.of("file1.txt", "dir/file2.txt"),
                 result);
 
-        verify(storage).list(eq(BUCKET), any());
+        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
     }
 
     @Test
     void list_shouldReturnEmptyList_whenNoObjectsFound() {
         // Given
         when(page.iterateAll()).thenReturn(List.of());
-        when(storage.list(eq(BUCKET), any())).thenReturn(page);
+        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
 
         // When
-        List<String> result = adapter.list("empty/");
+        List<String> result = adapter.list(BUCKET + "/" + "empty/");
 
         // Then
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
-        verify(storage).list(eq(BUCKET), any());
+        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
     }
 
     @Test
     void list_shouldThrowBucketOperationException_whenGcpFails() {
         // Given
-        when(storage.list(eq(BUCKET), any()))
+        when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class)))
                 .thenThrow(new RuntimeException("GCP failure"));
 
         // When / Then
         BucketOperationException ex = assertThrows(
                 BucketOperationException.class,
-                () -> adapter.list("dir/"));
+                () -> adapter.list(BUCKET + "/" + "dir/"));
 
         assertTrue(
                 ex.getMessage().contains("GCP error"));
 
-        verify(storage).list(eq(BUCKET), any());
+        verify(storage).list(eq(BUCKET), any(Storage.BlobListOption.class));
     }
 
     // ------------------------------------------------------------------
@@ -435,7 +435,7 @@ public class GcpAdapterImplTest {
         when(storage.get(BUCKET, "dir/file.txt")).thenReturn(blob);
 
         // When
-        boolean exists = adapter.doesExists("dir/file.txt");
+        boolean exists = adapter.doesExists(BUCKET + "/" + "dir/file.txt");
 
         // Then
         assertTrue(exists);
@@ -448,7 +448,7 @@ public class GcpAdapterImplTest {
         when(storage.get(BUCKET, "dir/missing.txt")).thenReturn(null);
 
         // When
-        boolean exists = adapter.doesExists("dir/missing.txt");
+        boolean exists = adapter.doesExists(BUCKET + "/" + "dir/missing.txt");
 
         // Then
         assertFalse(exists);
@@ -474,7 +474,7 @@ public class GcpAdapterImplTest {
         // When / Then
         BucketOperationException ex = assertThrows(
                 BucketOperationException.class,
-                () -> adapter.doesExists("dir/file.txt"));
+                () -> adapter.doesExists("test-bucket/dir/file.txt"));
 
         assertTrue(ex.getMessage().contains("GCP error"));
         verify(storage).get(BUCKET, "dir/file.txt");
