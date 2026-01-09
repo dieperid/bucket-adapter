@@ -237,8 +237,8 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
 ├── pom.xml
 ├── README.md
 ├── setup-test-data.sh
-├── docs                                                    # Documentatin folder
-└── src
+├── docs                                                    # Documentation folder
+└── src                                                     # Source code
     ├── main
     │   ├── java
     │   │   └── com
@@ -250,15 +250,16 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
     │   │               ├── BucketAdapterApplication.java
     │   │               ├── config
     │   │               ├── controller
-    │   │               ├── exception
+    │   │               ├── exception                       # Bucket exception
     │   │               ├── factory
+    │   │               ├── helper                          # Helpers
     │   │               ├── model
     │   │               └── service
     │   └── resources
     │       ├── application.properties
     │       ├── static
     │       └── templates
-    └── test
+    └── test                                                # Tests folder
         └── java
             └── com
                 └── example
