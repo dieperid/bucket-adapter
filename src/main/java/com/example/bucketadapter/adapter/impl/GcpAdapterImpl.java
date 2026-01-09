@@ -7,6 +7,14 @@ import com.example.bucketadapter.adapter.BucketAdapter;
 import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
+import com.example.bucketadapter.helper.AdapterHelper;
+
+import static com.example.bucketadapter.helper.ConfigHelper.getConfig;
+import static com.example.bucketadapter.helper.AdapterHelper.validateExpiration;
+import static com.example.bucketadapter.helper.AdapterHelper.validateNotRoot;
+import static com.example.bucketadapter.helper.AdapterHelper.validateRemoteSrc;
+import static com.example.bucketadapter.helper.AdapterHelper.BucketSrc;
+
 import com.google.cloud.storage.*;
 import com.google.api.gax.paging.Page;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -28,35 +36,32 @@ import java.util.stream.StreamSupport;
 public class GcpAdapterImpl implements BucketAdapter {
 
     private final Storage storage;
-    private final String bucket;
 
     public GcpAdapterImpl() {
-        this(
-                createStorageClient(),
-                resolveBucketName());
+        this(createStorageClient());
     }
 
     /**
      * Constructor with parameters for testing.
      * 
-     * @param storage
-     * @param bucket
+     * @param storage GCP Storage client
      */
-    GcpAdapterImpl(final Storage storage, final String bucket) {
+    GcpAdapterImpl(final Storage storage) {
         this.storage = storage;
-        this.bucket = bucket;
     }
 
     @Override
     public void upload(final String localSrc, final String remoteSrc) {
         try {
+            BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
             File file = new File(localSrc);
             if (!file.exists() || !file.isFile()) {
                 throw new InvalidBucketPathException(
                         "Local file does not exist: " + localSrc);
             }
 
-            BlobId blobId = BlobId.of(bucket, remoteSrc);
+            BlobId blobId = BlobId.of(bucketSrc.bucket(), bucketSrc.key());
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
 
             storage.create(blobInfo, java.nio.file.Files.readAllBytes(file.toPath()));
@@ -71,8 +76,10 @@ public class GcpAdapterImpl implements BucketAdapter {
 
     @Override
     public void download(final String localSrc, final String remoteSrc) {
+        BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
         try {
-            Blob blob = storage.get(bucket, remoteSrc);
+            Blob blob = storage.get(bucketSrc.bucket(), bucketSrc.key());
 
             if (blob == null) {
                 throw new BucketObjectNotFoundException(remoteSrc);
@@ -99,26 +106,32 @@ public class GcpAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateNotRoot(remoteSrc);
 
+        String normalizedRemoteSrc = "";
+        BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
         try {
+
             if (!recursive) {
-                boolean deleted = storage.delete(bucket, remoteSrc);
+                boolean deleted = storage.delete(bucketSrc.bucket(), bucketSrc.key());
                 if (!deleted) {
-                    throw new BucketObjectNotFoundException(remoteSrc);
+                    throw new BucketObjectNotFoundException(bucketSrc.key());
                 }
                 return;
             }
 
+            normalizedRemoteSrc = bucketSrc.key();
+
             Page<Blob> blobs = storage.list(
-                    bucket,
+                    bucketSrc.bucket(),
                     Storage.BlobListOption.prefix(
-                            remoteSrc.endsWith("/") ? remoteSrc : remoteSrc + "/"));
+                            normalizedRemoteSrc.endsWith("/") ? normalizedRemoteSrc : normalizedRemoteSrc + "/"));
 
             List<BlobId> toDelete = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .map(Blob::getBlobId)
                     .toList();
 
             if (toDelete.isEmpty()) {
-                throw new BucketObjectNotFoundException(remoteSrc);
+                throw new BucketObjectNotFoundException(normalizedRemoteSrc);
             }
 
             storage.delete(toDelete);
@@ -133,10 +146,12 @@ public class GcpAdapterImpl implements BucketAdapter {
 
     @Override
     public List<String> list(final String remoteSrc) {
+        BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
         try {
             Page<Blob> blobs = storage.list(
-                    bucket,
-                    Storage.BlobListOption.prefix(remoteSrc));
+                    bucketSrc.bucket(),
+                    Storage.BlobListOption.prefix(bucketSrc.key()));
 
             return StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .map(Blob::getName)
@@ -151,9 +166,10 @@ public class GcpAdapterImpl implements BucketAdapter {
     @Override
     public boolean doesExists(final String remoteSrc) {
         validateRemoteSrc(remoteSrc);
+        BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
 
         try {
-            return storage.get(bucket, remoteSrc) != null;
+            return storage.get(bucketSrc.bucket(), bucketSrc.key()) != null;
         } catch (Exception e) {
             throw new BucketOperationException(
                     "GCP error while checking existence of " + remoteSrc,
@@ -166,8 +182,10 @@ public class GcpAdapterImpl implements BucketAdapter {
         validateRemoteSrc(remoteSrc);
         validateExpiration(expirationTime);
 
+        BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
+
         try {
-            BlobInfo blobInfo = BlobInfo.newBuilder(bucket, remoteSrc).build();
+            BlobInfo blobInfo = BlobInfo.newBuilder(bucketSrc.bucket(), bucketSrc.key()).build();
 
             return storage.signUrl(
                     blobInfo,
@@ -201,67 +219,6 @@ public class GcpAdapterImpl implements BucketAdapter {
                     .getService();
         } catch (IOException e) {
             throw new IllegalStateException("Failed to load GCP credentials", e);
-        }
-    }
-
-    /**
-     * Resolve GCP bucket name from environment or system properties.
-     * 
-     * @return Bucket name
-     */
-    private static String resolveBucketName() {
-        return getConfig("GCP_BUCKET_NAME", "GCP bucket name");
-    }
-
-    /**
-     * Get configuration value from environment variable or system property.
-     * 
-     * @param envVar Environment variable / system property name
-     * @param name   Configuration name for error message
-     * @return Configuration value
-     */
-    private static String getConfig(final String envVar, final String name) {
-        String value = System.getenv(envVar);
-        if (value == null || value.isBlank()) {
-            value = System.getProperty(envVar);
-        }
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException(name + " is not configured");
-        }
-        return value;
-    }
-
-    /**
-     * Validate that remoteSrc exists
-     * 
-     * @param remoteSrc
-     */
-    private void validateRemoteSrc(final String remoteSrc) {
-        if (remoteSrc == null || remoteSrc.isBlank()) {
-            throw new InvalidBucketPathException("remoteSrc must not be empty");
-        }
-    }
-
-    /**
-     * Validate that remoteSrc is not root
-     * 
-     * @param remoteSrc
-     */
-    private void validateNotRoot(final String remoteSrc) {
-        if ("/".equals(remoteSrc)) {
-            throw new InvalidBucketPathException("Root path '/' is forbidden");
-        }
-    }
-
-    /**
-     * Validate expiration time for signed URL
-     * 
-     * @param expirationTime
-     */
-    private void validateExpiration(final int expirationTime) {
-        if (expirationTime <= 0 || expirationTime > 7 * 24 * 3600) {
-            throw new InvalidBucketPathException(
-                    "expirationTime must be between 1 second and 7 days");
         }
     }
 }

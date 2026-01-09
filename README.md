@@ -91,7 +91,6 @@ SERVER_PORT=8080
 Required variables:
 
 ```bash
-AWS_BUCKET_NAME=your-bucket-name
 AWS_REGION=your-region
 AWS_ACCESS_KEY_ID=your-access-key-id
 AWS_SECRET_ACCESS_KEY=your-secret-access-key
@@ -109,7 +108,6 @@ Required variables :
 
 ```bash
 GCP_PROJECT_ID=your-project-id
-GCP_BUCKET_NAME=your-bucket-name
 GOOGLE_APPLICATION_CREDENTIALS=./path-to-credentials.json
 ```
 
@@ -239,8 +237,8 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
 ├── pom.xml
 ├── README.md
 ├── setup-test-data.sh
-├── docs                                                    # Documentatin folder
-└── src
+├── docs                                                    # Documentation folder
+└── src                                                     # Source code
     ├── main
     │   ├── java
     │   │   └── com
@@ -252,15 +250,16 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
     │   │               ├── BucketAdapterApplication.java
     │   │               ├── config
     │   │               ├── controller
-    │   │               ├── exception
+    │   │               ├── exception                       # Bucket exception
     │   │               ├── factory
+    │   │               ├── helper                          # Helpers
     │   │               ├── model
     │   │               └── service
     │   └── resources
     │       ├── application.properties
     │       ├── static
     │       └── templates
-    └── test
+    └── test                                                # Tests folder
         └── java
             └── com
                 └── example
