@@ -1,5 +1,5 @@
 @startuml BucketAdapter
-title BucketAdapter v3 (02.01.26)
+title BucketAdapter v4 (09.01.26)
 
 class BucketController {
     - bucketService: BucketService
@@ -43,18 +43,28 @@ interface BucketAdapter {
 }
 
 class AzureAdapterImpl
-class GcpAdapterImpl
+
+class GcpAdapterImpl {
+    - storage: Storage
+
+    + GcpAdapterImpl()
+    - GcpAdapterImpl(storage: Storage)
+    - createStorageClient(): Storage
+}
 
 class AwsAdapterImpl {
     - s3Client: S3Client
-    - bucket: String
     - s3Presigner: S3Presigner
 
     + AwsAdapterImpl()
-    - AwsAdapterImpl(s3Client: S3Client, bucket: String, s3Presigner: S3Presigner)
+    - AwsAdapterImpl(s3Client: S3Client, s3Presigner: S3Presigner)
     - createS3Client(): S3Client
     - createS3Presigner(): S3Presigner
-    - getConfig(envVar: string, configName: string): string
+}
+
+package Helper {
+    class AdapterHelper {}
+    class ConfigHelper {}
 }
 
 ' ---- SDK ----
@@ -64,7 +74,11 @@ package AWSSDK {
     interface AwsClient
 }
 
-package GCPSDK {}
+package GCPSDK {
+    interface Storage
+    interface Blob
+}
+
 package AZURESDK {}
 
 ' ---- Exception ----
@@ -103,6 +117,9 @@ BucketException --|> Exception
 BucketObjectNotFoundException --|> Exception
 InvalidBucketPathException --|> Exception
 
+GcpAdapterImpl --> Helper : <<uses>>
+AwsAdapterImpl --> Helper : <<uses>>
+
 ' Dependency Injection instead of instantiation
 AwsAdapterImpl --> S3Client : <<uses>>
 AwsAdapterImpl --> S3Presigner : <<uses>>
@@ -119,8 +136,17 @@ class AwsAdapterImplTest <<test>> {
     - awsAdapter: AwsAdapterImpl
 }
 
+class GcpAdapterImplTest <<test>> {
+    - storage: Storage <<mock>>
+    - gcpAdapter: GcpAdapterImpl
+}
+
 AwsAdapterImplTest --> AwsAdapterImpl : <<injects>>
 AwsAdapterImplTest --> S3Client : <<creates mock>>
 AwsAdapterImplTest --> S3Presigner : <<creates mock>>
+
+GcpAdapterImplTest --> GcpAdapterImpl : <<injects>>
+GcpAdapterImplTest --> Storage : <<creates mock>>
+GcpAdapterImplTest --> Blob : <<creates mock>>
 
 @enduml
