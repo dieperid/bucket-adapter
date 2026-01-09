@@ -253,7 +253,6 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
     │   │               ├── exception                       # Bucket exception
     │   │               ├── factory
     │   │               ├── helper                          # Helpers
-    │   │               ├── model
     │   │               └── service
     │   └── resources
     │       ├── application.properties
