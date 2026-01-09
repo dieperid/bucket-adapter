@@ -88,11 +88,18 @@ public class AwsAdapterImpl implements BucketAdapter {
         AdapterHelper.validateKeyRequired(bucketSrc);
 
         try {
+            // First, check if the object exists
+            if (!doesExists(remoteSrc)) {
+                throw new BucketObjectNotFoundException(remoteSrc);
+            }
+
             s3Client.getObject(GetObjectRequest.builder()
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
                     .build(),
                     Paths.get(localSrc));
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
                     "AWS S3 error while downloading file from " + remoteSrc, e);
@@ -173,6 +180,8 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .bucket(bucketSrc.bucket())
                     .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
+        } catch (BucketObjectNotFoundException e) {
+            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
                     "AWS S3 error while deleting file(s) at " + normalizedRemoteSrc, e);
