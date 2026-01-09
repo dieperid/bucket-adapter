@@ -231,6 +231,9 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
 .
 ├── docker-compose.yml
 ├── Dockerfile
+├── .env.example
+├── .gcp-credentials.example.json
+├── checkstyle.xml
 ├── Doxyfile
 ├── mvnw
 ├── mvnw.cmd
