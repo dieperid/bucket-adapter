@@ -25,6 +25,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,6 +60,16 @@ public class GcpAdapterImplTest {
 
     @InjectMocks
     private GcpAdapterImpl adapter;
+
+    @BeforeAll
+    static void beforeAll() {
+        System.setProperty("SHARE_LINK_MAX_EXPIRATION_TIME", "604800");
+    }
+
+    @AfterAll
+    static void tearDownAfterAll() {
+        System.clearProperty("SHARE_LINK_MAX_EXPIRATION_TIME");
+    }
 
     @BeforeEach
     void setUp() throws IOException {

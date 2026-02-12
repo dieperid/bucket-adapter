@@ -27,7 +27,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -73,6 +75,16 @@ public class AwsAdapterImplTest {
     private Path tempDirectory;
 
     Supplier<S3Presigner> presignerSupplier = () -> s3Presigner;
+
+    @BeforeAll
+    static void beforeAll() {
+        System.setProperty("SHARE_LINK_MAX_EXPIRATION_TIME", "604800");
+    }
+
+    @AfterAll
+    static void tearDownAfterAll() {
+        System.clearProperty("SHARE_LINK_MAX_EXPIRATION_TIME");
+    }
 
     @BeforeEach
     void setUp() throws IOException {
@@ -495,14 +507,16 @@ public class AwsAdapterImplTest {
         // given
         String prefix = "dir/";
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
-                .thenThrow(S3Exception.builder().statusCode(500).message("Internal Server Error").build());
+                .thenThrow(S3Exception.builder().statusCode(500).message("Internal Server Error")
+                        .build());
 
         // when / then
         BucketOperationException exception = assertThrows(BucketOperationException.class, () -> {
             adapter.list(prefix);
         });
 
-        assertTrue(exception.getMessage().contains("AWS S3 error") || exception.getCause() instanceof S3Exception);
+        assertTrue(exception.getMessage().contains("AWS S3 error")
+                || exception.getCause() instanceof S3Exception);
 
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
     }
