@@ -175,7 +175,6 @@
                     <configuration>
                         <outputDir>${project.build.directory}</outputDir>
                         <outputFileName>openapi</outputFileName>
-                        <format>json</format>
                         <apiDocsUrl>${openapi.docs.url}</apiDocsUrl>
                     </configuration>
                     </execution>
