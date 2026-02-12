@@ -86,6 +86,7 @@
             <artifactId>s3</artifactId>
         </dependency>
 
+        <!-- TODO NGY unused dependencies-->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
@@ -180,6 +181,8 @@
                         <outputDir>${project.build.directory}</outputDir>
                         <outputFileName>openapi</outputFileName>
                         <format>json</format>
+                        <!-- TODO NGY remove format attribute-->
+                        <!-- TODO NGY hard coded listening port in pom... -->
                         <apiDocsUrl>http://localhost:8080/v3/api-docs</apiDocsUrl>
                     </configuration>
                     </execution>

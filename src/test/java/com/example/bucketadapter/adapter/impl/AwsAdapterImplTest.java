@@ -85,6 +85,7 @@ public class AwsAdapterImplTest {
         tempDirectory = Files.createTempDirectory("upload-dir-");
     }
 
+    //TODO NGY Try to avoid using file system interaction for testing (performances issues)
     @AfterEach
     void tearDown() throws Exception {
         Files.deleteIfExists(tempFile);

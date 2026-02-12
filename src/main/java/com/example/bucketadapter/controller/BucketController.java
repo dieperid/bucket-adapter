@@ -14,6 +14,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.*;
 
+//TODO NGY https://www.baeldung.com/spring-rest-openapi-documentation
+//TODO NGY add api routes versioning
+//TODO NGY files vs object ?
+
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Bucket API", description = "API to manage files stored in a bucket (upload, download, update, delete, list, share)")
@@ -65,6 +69,8 @@ public class BucketController {
             @ApiResponse(responseCode = "404", description = "File not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+
+    //TODO NGY /download -> really necessary ?
     @GetMapping(value = "/files/download", params = "remoteSrc")
     @ResponseStatus(HttpStatus.OK)
     public void download(
@@ -158,6 +164,8 @@ public class BucketController {
             @ApiResponse(responseCode = "404", description = "File not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+
+    //TODO NGY What about using a "PATCH" VERB (to change the resource state)
     @PostMapping("/files/share")
     public String share(
             @Parameter(description = "Path of the file in the bucket", example = "/path/in/bucket/file.txt", required = true) @RequestParam String remoteSrc,

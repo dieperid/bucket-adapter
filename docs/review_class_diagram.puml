@@ -1,0 +1,19 @@
+@startuml
+
+@title "David - BI - Review"
+
+package BucketAdapter{
+    class BucketAdapterApplication
+
+    package Controller{
+        
+    }
+
+}
+
+' Relations
+
+
+
+
+@enduml

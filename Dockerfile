@@ -5,10 +5,12 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
 # Copy Maven wrapper and pom.xml
+# //TODO NGY write a solution without wrapper
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
+# //TODO NGY simplify this command (wrapper)
 RUN chmod +x mvnw && ./mvnw dependency:go-offline
 
 # Copy the source code

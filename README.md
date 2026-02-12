@@ -25,6 +25,7 @@ The architecture is based on the **Adapter + Factory pattern**, enabling easy in
 doxygen Doxyfile
 ```
 
+//TODO NGY Update the doc (no html folder under docs)
 The documentaion will be located in the `html` folder in `/docs`
 
 2. View the documentation
@@ -49,7 +50,12 @@ The following tools and dependencies are required:
   * OpenJDK Runtime Environment `(Red_Hat-21.0.9.0.10-1) (build 21.0.9+10)`
   * JVM compatible with Java 21
 
+//TODO NGY Php for the docs
+//TODO NGY Consider using swagger or other embedded doc tools in spring
+
 * **Frameworks & Libraries**
+
+//TODO NGY remove it. Remplace it by the pom.xml path.
   * Spring Boot 4.0.0
   * Spring Framework 7.0.1
   * AWS SDK v2 (S3, Presigner)
@@ -57,6 +63,7 @@ The following tools and dependencies are required:
   * Mockito
 
 * **Build & Dependency Management**
+# //TODO NGY wrapper... sure ?
   * Maven Wrapper (`./mvnw` or `mvn`)
 
 * **IDE used**
@@ -70,7 +77,11 @@ The following tools and dependencies are required:
   * Google Cloud Storage (planned)
   * Azure Blob Storage (planned)
 
+//TODO NGY - Remove AZURE (not implemented yet)
+
 * **Virtualization**
+
+//TODO NGY Mandatory ? Do not force Docker usage.
   * Docker version 29.1.3, build f52814d
 
 ---
@@ -125,6 +136,7 @@ PROVIDER_IMPL=GCP
 
 #### Azure configuration
 
+//TODO NGY Remove it
 ...
 
 ## Deployment
@@ -133,13 +145,25 @@ PROVIDER_IMPL=GCP
 
 #### Build the project
 
+
+//TODO NGY This command does much more than just “build.”. Check Maven Life Cycle doc.
+
 ```bash
 mvn clean install
+```
+
+//TODO NGY Result of the clean install
+
+```
+[...]bucket-adapter/src/main/java/com/example/bucketadapter/controller/BucketController.java:15:17: Using the '.*' form of import should be avoided - java.util.*. [AvoidStarImport]
+Audit done.
 ```
 
 #### Run tests
 
 **Generate "data" folder for testing**
+
+//TODO NGY - Only test classes are responsible for creating the test context.
 
 1. Make the script executable :
 
@@ -155,9 +179,12 @@ chmod +x setup-test-data.sh
 
 3. Run tests
 
+//TODO NGY - Typo....
 ```bash
 nvn test
 ```
+
+//TODO NGY - Was the test sequence performed without needing to run the test script?
 
 4. Check for coverage
 
@@ -181,6 +208,8 @@ mvn spring-boot:run
 ```bash
 # Make sure Maven wrapper is executable
 chmod +x mvnw
+
+//TODO NGY wrapper deprecated (maven doc)
 
 # Clean and compile, skip tests
 mvn clean package -DskipTests
@@ -268,11 +297,11 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
     └── test                                                # Tests folder
         └── java
             └── com
-                └── example
+                └── example                                 # //TODO NGY Namespace could be better
                     └── bucketadapter
                         ├── adapter
-                        │   └── impl
-                        └── BucketAdapterApplicationTests.java
+                        │   └── impl                        # //TODO NGY - ???
+                        └── BucketAdapterApplicationTests.java  # //NGY - only for ony provider, which one ?
 ```
 
 ## Collaborate
@@ -305,6 +334,7 @@ feature/implement-aws-s3
 release/1.0.0
 hotfix/fix-servor-error-on-s3-upload
 ```
+# //TODO NGY Hotfix naming convention hotfix/1.2.1 or with description hotfix/1.2.1-critical-auth-bug
 
 ## License
 

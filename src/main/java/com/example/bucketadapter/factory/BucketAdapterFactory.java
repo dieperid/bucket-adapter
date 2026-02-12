@@ -8,6 +8,7 @@ import com.example.bucketadapter.adapter.BucketAdapter;
 @Component
 public class BucketAdapterFactory {
 
+    //TODO NGY Avoid DI by Field Injection. Prefer Injection by method and configuration
     @Autowired
     private Map<String, BucketAdapter> adapters;
 

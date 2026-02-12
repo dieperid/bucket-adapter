@@ -51,7 +51,7 @@ public class AwsAdapterImpl implements BucketAdapter {
      * Constructor with parameters for testing purposes.
      * 
      * @param s3Client - S3 client
-     * @param bucket   - S3 bucket name
+     * @param bucket   - S3 bucket name //TODO remove it
      */
     AwsAdapterImpl(S3Client s3Client, Supplier<S3Presigner> presignerSupplier) {
         this.s3Client = s3Client;
@@ -99,6 +99,7 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .build(),
                     Paths.get(localSrc));
         } catch (BucketObjectNotFoundException e) {
+            //TODO NGY Purpose of this first catch ?
             throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
@@ -181,6 +182,7 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
         } catch (BucketObjectNotFoundException e) {
+            //TODO NGY
             throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
@@ -271,6 +273,7 @@ public class AwsAdapterImpl implements BucketAdapter {
         String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
         String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
 
+        //TODO NGY getconfig can set to "null" the variables ? If never null -> condition will be always true
         if (accessKey == null || secretKey == null) {
             throw new IllegalStateException("AWS credentials are not set in environment variables");
         }
