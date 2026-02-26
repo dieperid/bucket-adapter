@@ -1,21 +1,19 @@
-version: "3.9"
-
 services:
   bucket-adapter:
     build:
       context: .
-    image: bi-bucket-adapter:latest
+    image: ${IMAGE_NAME:-bi-bucket-adapter:latest}
     env_file:
       - .env
     environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/gcp-credentials.json # OVERRIDE .env to use copied gcp cred. 
-      - AWS_SHARED_CREDENTIALS_FILE=/.aws/credentials # OVERRIDE .env to use copied aws cred. Remove those lines if you want to specify auth settings in the .env file 
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS_CONTAINER:-/gcp-credentials.json}
+      AWS_SHARED_CREDENTIALS_FILE: ${AWS_SHARED_CREDENTIALS_FILE_CONTAINER:-/.aws/credentials}
     ports:
-      - "8080:8080"
+      - "${HOST_PORT:-8080}:${SERVER_PORT:-8080}"
     volumes:
       - ./src:/app/src
       - ./pom.xml:/app/pom.xml
       - ./data:/app/data
-      - ./gcp-credentials.json:/gcp-credentials.json:ro
-      - /home/ddieperi/.aws/credentials:/.aws/credentials:ro
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./gcp-credentials.json}:${GOOGLE_APPLICATION_CREDENTIALS_CONTAINER:-/gcp-credentials.json}:ro
+      - ${AWS_SHARED_CREDENTIALS_FILE:-${HOME}/.aws/credentials}:${AWS_SHARED_CREDENTIALS_FILE_CONTAINER:-/.aws/credentials}:ro
     restart: unless-stopped
