@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import com.example.bucketadapter.adapter.BucketAdapter;
 import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
-import com.example.bucketadapter.exception.InvalidBucketPathException;
 import com.example.bucketadapter.helper.AdapterHelper;
 
 import static com.example.bucketadapter.helper.ConfigHelper.getConfig;
@@ -23,13 +22,23 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.core.ResponseBytes;
 
-import java.io.File;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -50,8 +59,8 @@ public class AwsAdapterImpl implements BucketAdapter {
     /**
      * Constructor with parameters for testing purposes.
      * 
-     * @param s3Client - S3 client
-     * @param bucket   - S3 bucket name
+     * @param s3Client          - S3 client
+     * @param presignerSupplier - Supplier for S3 presigner
      */
     AwsAdapterImpl(S3Client s3Client, Supplier<S3Presigner> presignerSupplier) {
         this.s3Client = s3Client;
@@ -59,29 +68,23 @@ public class AwsAdapterImpl implements BucketAdapter {
     }
 
     @Override
-    public void upload(String localSrc, String remoteSrc) {
+    public void upload(String remoteSrc, byte[] content) {
         try {
             BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
-
-            File file = new File(localSrc);
-            if (!file.exists() || !file.isFile()) {
-                throw new InvalidBucketPathException(
-                        "Local file does not exist: " + localSrc);
-            }
 
             s3Client.putObject(PutObjectRequest.builder()
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
                     .build(),
-                    RequestBody.fromFile(file));
+                    RequestBody.fromBytes(content));
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while uploading file to " + remoteSrc, e);
+                    "AWS S3 error while uploading object to " + remoteSrc, e);
         }
     }
 
     @Override
-    public void download(String localSrc, String remoteSrc) {
+    public byte[] download(String remoteSrc) {
         validateRemoteSrc(remoteSrc);
 
         BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
@@ -93,28 +96,20 @@ public class AwsAdapterImpl implements BucketAdapter {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
-            s3Client.getObject(GetObjectRequest.builder()
+            ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(GetObjectRequest.builder()
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
-                    .build(),
-                    Paths.get(localSrc));
-        } catch (BucketObjectNotFoundException e) {
-            throw e;
+                    .build());
+            return objectBytes.asByteArray();
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while downloading file from " + remoteSrc, e);
+                    "AWS S3 error while downloading object from " + remoteSrc, e);
         }
     }
 
     @Override
-    public void update(String localSrc, String remoteSrc) {
+    public void update(String remoteSrc, byte[] content) {
         try {
-            File file = new File(localSrc);
-            if (!file.exists() || !file.isFile()) {
-                throw new InvalidBucketPathException(
-                        "Local file does not exist or is not a file: " + localSrc);
-            }
-
             // Check if the object exists
             if (!doesExists(remoteSrc)) {
                 throw new BucketObjectNotFoundException(remoteSrc);
@@ -127,10 +122,10 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
                     .build(),
-                    RequestBody.fromFile(new File(localSrc)));
+                    RequestBody.fromBytes(content));
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while updating file at " + remoteSrc, e);
+                    "AWS S3 error while updating object at " + remoteSrc, e);
         }
     }
 
@@ -180,8 +175,6 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .bucket(bucketSrc.bucket())
                     .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
-        } catch (BucketObjectNotFoundException e) {
-            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
                     "AWS S3 error while deleting file(s) at " + normalizedRemoteSrc, e);
@@ -270,10 +263,6 @@ public class AwsAdapterImpl implements BucketAdapter {
         String region = resolveRegion();
         String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
         String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
-
-        if (accessKey == null || secretKey == null) {
-            throw new IllegalStateException("AWS credentials are not set in environment variables");
-        }
 
         AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
 

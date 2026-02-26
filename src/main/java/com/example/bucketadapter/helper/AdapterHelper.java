@@ -1,5 +1,7 @@
 package com.example.bucketadapter.helper;
 
+import static com.example.bucketadapter.helper.ConfigHelper.getConfig;
+
 import com.example.bucketadapter.exception.InvalidBucketPathException;
 
 public class AdapterHelper {
@@ -68,9 +70,12 @@ public class AdapterHelper {
      * @param expirationTime
      */
     public static void validateExpiration(int expirationTime) {
-        if (expirationTime <= 0 || expirationTime > 7 * 24 * 3600) {
+        String maxExpirationTime = getConfig("SHARE_LINK_MAX_EXPIRATION_TIME", "Share Link Max Expiration Time");
+        int maxExpiration = Integer.parseInt(maxExpirationTime);
+
+        if (expirationTime <= 0 || expirationTime > maxExpiration) {
             throw new InvalidBucketPathException(
-                    "expirationTime must be between 1 second and 7 days");
+                    "expirationTime must be between 1 second and " + maxExpiration + " seconds");
         }
     }
 

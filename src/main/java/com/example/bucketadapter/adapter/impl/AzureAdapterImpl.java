@@ -10,19 +10,13 @@ import java.util.List;
 public class AzureAdapterImpl implements BucketAdapter {
 
     @Override
-    public void upload(String localSrc, String remoteSrc) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'upload'");
-    }
-
-    @Override
-    public void download(String localSrc, String remoteSrc) {
+    public byte[] download(String remoteSrc) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'download'");
     }
 
     @Override
-    public void update(String localSrc, String remoteSrc) {
+    public void update(String remoteSrc, byte[] content) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'update'");
     }
@@ -49,5 +43,11 @@ public class AzureAdapterImpl implements BucketAdapter {
     public String share(String remoteSrc, int expirationTime) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'share'");
+    }
+
+    @Override
+    public void upload(String remoteSrc, byte[] content) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'upload'");
     }
 }
