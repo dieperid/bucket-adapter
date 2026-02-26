@@ -41,7 +41,7 @@ public class BucketController {
      * Upload an object to the bucket.
      * 
      * CURL sample :
-     * curl -X POST "http://localhost:8080/api/files" \
+     * curl -X POST "http://localhost:8080/api/objects" \
      * -F "remote=my-bucket/path/in/bucket/file.txt" \
      * -F "file=@/path/to/local/file.txt"
      * 
@@ -54,7 +54,7 @@ public class BucketController {
             @ApiResponse(responseCode = "400", description = "Invalid remote path"),
             @ApiResponse(responseCode = "404", description = "Bucket/object not found")
     })
-    @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/objects", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public void upload(@RequestParam String remote, @RequestPart("file") MultipartFile file) {
         try {
@@ -69,7 +69,7 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -X GET
-     * "http://localhost:8080/api/files/download?remote=my-bucket/path/in/bucket/file.txt"
+     * "http://localhost:8080/api/objects/download?remote=my-bucket/path/in/bucket/file.txt"
      * --output downloaded-file.txt
      * 
      * @param remote - source path in the bucket (bucket/key)
@@ -81,7 +81,7 @@ public class BucketController {
             @ApiResponse(responseCode = "404", description = "Object not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @GetMapping(value = "/files/download", params = "remote", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/objects/download", params = "remote", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     @ResponseStatus(HttpStatus.OK)
     public byte[] download(
             @Parameter(description = "Path of the object in the bucket", example = "bucket/path/in/bucket/file.txt", required = true) @RequestParam String remote) {
@@ -92,7 +92,7 @@ public class BucketController {
      * Update an existing object in the bucket.
      * 
      * CURL sample :
-     * curl -X PUT "http://localhost:8080/api/files" \
+     * curl -X PUT "http://localhost:8080/api/objects" \
      * -F "remote=my-bucket/path/in/bucket/file.txt" \
      * -F "file=@/path/to/local/updated-file.txt"
      * 
@@ -105,7 +105,7 @@ public class BucketController {
             @ApiResponse(responseCode = "404", description = "Object not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @PutMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/objects", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void update(@RequestParam String remote, @RequestPart("file") MultipartFile file) {
         try {
@@ -120,7 +120,7 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -X DELETE
-     * "http://localhost:8080/api/files?remote=my-bucket/path/in/bucket/file.txt&recursive=false"
+     * "http://localhost:8080/api/objects?remote=my-bucket/path/in/bucket/file.txt&recursive=false"
      * 
      * @param remote    - object or prefix path in the bucket (bucket/key or
      *                  bucket/prefix)
@@ -132,7 +132,7 @@ public class BucketController {
             @ApiResponse(responseCode = "404", description = "Object not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @DeleteMapping(value = "/files", params = "remote")
+    @DeleteMapping(value = "/objects", params = "remote")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @Parameter(description = "Path of the object or prefix in the bucket", example = "bucket/path/in/bucket/file.txt", required = true) @RequestParam String remote,
@@ -145,7 +145,7 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -X GET
-     * "http://localhost:8080/api/files?path=my-bucket/path/in/bucket/"
+     * "http://localhost:8080/api/objects?path=my-bucket/path/in/bucket/"
      * 
      * @param path - prefix path in the bucket (bucket/prefix)
      * @return list of object keys
@@ -155,7 +155,7 @@ public class BucketController {
             @ApiResponse(responseCode = "200", description = "List of objects returned successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @GetMapping(value = "/files", params = "path")
+    @GetMapping(value = "/objects", params = "path")
     public List<String> list(
             @Parameter(description = "Prefix path in the bucket", example = "bucket/path/in/bucket", required = true) @RequestParam String path) {
         return bucketService.list(path);
@@ -166,7 +166,7 @@ public class BucketController {
      * 
      * CURL sample :
      * curl -X POST
-     * "http://localhost:8080/api/files/share?remote=my-bucket/path/in/bucket/file.txt&expirationTime=3600"
+     * "http://localhost:8080/api/objects/share?remote=my-bucket/path/in/bucket/file.txt&expirationTime=3600"
      * 
      * @param remote         - object path in the bucket (bucket/key)
      * @param expirationTime - link expiration time in seconds
@@ -178,7 +178,7 @@ public class BucketController {
             @ApiResponse(responseCode = "404", description = "Object not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @PostMapping(value = "/files/share", params = { "remote", "expirationTime" })
+    @PostMapping(value = "/objects/share", params = { "remote", "expirationTime" })
     public String share(
             @Parameter(description = "Path of the object in the bucket", example = "bucket/path/in/bucket/file.txt", required = true) @RequestParam String remote,
             @Parameter(description = "Expiration time in seconds", example = "3600") @RequestParam int expirationTime) {
