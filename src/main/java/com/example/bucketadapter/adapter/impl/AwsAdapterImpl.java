@@ -60,8 +60,8 @@ public class AwsAdapterImpl implements BucketAdapter {
     /**
      * Constructor with parameters for testing purposes.
      * 
-     * @param s3Client - S3 client
-     * @param bucket   - S3 bucket name
+     * @param s3Client          - S3 client
+     * @param presignerSupplier - Supplier for S3 presigner
      */
     AwsAdapterImpl(S3Client s3Client, Supplier<S3Presigner> presignerSupplier) {
         this.s3Client = s3Client;
@@ -108,8 +108,6 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .key(bucketSrc.key())
                     .build(),
                     Paths.get(localSrc));
-        } catch (BucketObjectNotFoundException e) {
-            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
                     "AWS S3 error while downloading file from " + remoteSrc, e);
@@ -190,8 +188,6 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .bucket(bucketSrc.bucket())
                     .delete(Delete.builder().objects(objectsToDelete).build())
                     .build());
-        } catch (BucketObjectNotFoundException e) {
-            throw e;
         } catch (S3Exception e) {
             throw new BucketOperationException(
                     "AWS S3 error while deleting file(s) at " + normalizedRemoteSrc, e);
@@ -280,10 +276,6 @@ public class AwsAdapterImpl implements BucketAdapter {
         String region = resolveRegion();
         String accessKey = getConfig("AWS_ACCESS_KEY_ID", "AWS Access Key ID");
         String secretKey = getConfig("AWS_SECRET_ACCESS_KEY", "AWS Secret Access Key");
-
-        if (accessKey == null || secretKey == null) {
-            throw new IllegalStateException("AWS credentials are not set in environment variables");
-        }
 
         AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
 
