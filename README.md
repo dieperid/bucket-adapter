@@ -61,6 +61,7 @@ The following tools and dependencies are required:
 
 * **Supported OS (tested)**
   * Linux (`Fedora Linux 42 (Workstation Edition)`)
+  * MacOS (`macOS Tahoe Version 26.3`)
 
 * **Cloud Providers**
   * AWS S3 (currently implemented)
@@ -226,27 +227,13 @@ Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/r
 
 #### Run tests
 
-**Generate "data" folder for testing**
-
-1. Make the script executable :
-
-```bash
-chmod +x setup-test-data.sh
-```
-
-2. Execute the script to create the **data** folder with sample files for testing :
-
-```bash
-./setup-test-data.sh
-```
-
-3. Run tests
+1. Run tests
 
 ```bash
 mvn test
 ```
 
-4. Check for coverage
+2. Check for coverage
 
 ```bash
 # Generate coverage report
