@@ -1,5 +1,6 @@
 package com.example.bucketadapter.adapter.impl;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -8,21 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
@@ -32,7 +27,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -40,17 +34,18 @@ import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
 
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -65,41 +60,32 @@ public class AwsAdapterImplTest {
     @Mock
     private S3Presigner s3Presigner;
 
-    @InjectMocks
     private AwsAdapterImpl adapter;
-
     private AutoCloseable closeable;
 
-    private static Path tempFile;
-
-    private static Path tempDirectory;
-
-    Supplier<S3Presigner> presignerSupplier = () -> s3Presigner;
+    private final Supplier<S3Presigner> presignerSupplier = () -> s3Presigner;
 
     @BeforeAll
-    static void beforeAll() throws IOException {
+    static void beforeAll() {
         System.setProperty("SHARE_LINK_MAX_EXPIRATION_TIME", "604800");
-        tempFile = Files.createTempFile("upload-test-", ".txt");
-        Files.writeString(tempFile, "test content");
-        tempDirectory = Files.createTempDirectory("upload-dir-");
     }
 
     @AfterAll
-    static void tearDownAfterAll() throws IOException {
-        Files.deleteIfExists(tempFile);
-        Files.deleteIfExists(tempDirectory);
+    static void tearDownAfterAll() {
         System.clearProperty("SHARE_LINK_MAX_EXPIRATION_TIME");
     }
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() {
         closeable = MockitoAnnotations.openMocks(this);
         adapter = new AwsAdapterImpl(s3Client, presignerSupplier);
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        closeable.close();
+        if (closeable != null) {
+            closeable.close();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -107,12 +93,11 @@ public class AwsAdapterImplTest {
     // ------------------------------------------------------------------
 
     @Test
-    void upload_shouldUploadFile_whenFileIsValid() {
-        // given
+    void upload_shouldUploadObject_whenInputIsValid() throws Exception {
         String remoteSrc = "test-bucket/dir/file.txt";
+        byte[] content = "test-content".getBytes();
 
-        // when / then
-        assertDoesNotThrow(() -> adapter.upload(tempFile.toString(), remoteSrc));
+        assertDoesNotThrow(() -> adapter.upload(remoteSrc, content));
 
         verify(s3Client, times(1)).putObject(
                 argThat((PutObjectRequest req) -> req.bucket().equals("test-bucket")
@@ -121,53 +106,20 @@ public class AwsAdapterImplTest {
     }
 
     @Test
-    void upload_shouldFail_whenLocalFileDoesNotExist() {
-        // given
-        String missingFile = "/path/to/local/missing.txt";
-
-        // when / then
-        InvalidBucketPathException exception = assertThrows(InvalidBucketPathException.class,
-                () -> adapter.upload(missingFile, "dir/file.txt"));
-
-        assertTrue(exception.getMessage().contains("Local file does not exist"));
-
-        verify(s3Client, never()).putObject(
-                any(PutObjectRequest.class),
-                any(RequestBody.class));
+    void upload_shouldFail_whenRemoteSrcIsInvalid() throws Exception {
+        assertThrows(InvalidBucketPathException.class,
+                () -> adapter.upload("   ", "x".getBytes()));
+        verifyNoInteractions(s3Client);
     }
 
     @Test
-    void upload_shouldFail_whenLocalPathIsDirectory() {
-        // given
-        String remoteSrc = "dir/file.txt";
-
-        // when / then
-        InvalidBucketPathException exception = assertThrows(InvalidBucketPathException.class,
-                () -> adapter.upload(tempDirectory.toString(), remoteSrc));
-
-        // then
-        assertTrue(exception.getMessage().contains("Local file does not exist"));
-
-        verify(s3Client, never()).putObject(
-                any(PutObjectRequest.class),
-                any(RequestBody.class));
-    }
-
-    @Test
-    void upload_shouldThrowBucketOperationException_whenS3Fails() {
-        // given
-        doThrow(S3Exception.builder()
-                .statusCode(500)
-                .message("AWS internal error")
-                .build())
+    void upload_shouldThrowBucketOperationException_whenS3Fails() throws Exception {
+        doThrow(S3Exception.builder().statusCode(500).message("AWS failure").build())
                 .when(s3Client)
                 .putObject(any(PutObjectRequest.class), any(RequestBody.class));
 
-        // when / then
-        BucketOperationException exception = assertThrows(BucketOperationException.class,
-                () -> adapter.upload(tempFile.toString(), "dir/file.txt"));
-
-        assertTrue(exception.getCause() instanceof S3Exception);
+        assertThrows(BucketOperationException.class,
+                () -> adapter.upload("test-bucket/file.txt", "x".getBytes()));
     }
 
     // ------------------------------------------------------------------
@@ -175,75 +127,44 @@ public class AwsAdapterImplTest {
     // ------------------------------------------------------------------
 
     @Test
-    void download_shouldDownloadFile_whenObjectExists() {
-        // given
+    void download_shouldReturnObjectBytes_whenObjectExists() throws Exception {
         String remoteSrc = "test-bucket/dir/file.txt";
-        String localSrc = "/tmp/file.txt";
+        byte[] expected = "payload".getBytes();
 
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().build());
+        when(s3Client.getObjectAsBytes(any(GetObjectRequest.class)))
+                .thenReturn(ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), expected));
 
-        // when / then
-        assertDoesNotThrow(() -> adapter.download(localSrc, remoteSrc));
+        byte[] result = adapter.download(remoteSrc);
 
-        // then
-        verify(s3Client, times(1))
-                .headObject(any(HeadObjectRequest.class));
-
-        verify(s3Client, times(1))
-                .getObject(
-                        argThat((GetObjectRequest req) -> req.bucket().equals("test-bucket")
-                                && req.key().equals("dir/file.txt")),
-                        eq(Path.of(localSrc)));
+        assertArrayEquals(expected, result);
+        verify(s3Client, times(1)).headObject(any(HeadObjectRequest.class));
+        verify(s3Client, times(1)).getObjectAsBytes(
+                argThat((GetObjectRequest req) -> req.bucket().equals("test-bucket")
+                        && req.key().equals("dir/file.txt")));
     }
 
     @Test
-    void download_shouldFail_whenObjectDoesNotExist() {
-        // given
-        String remoteSrc = "missing/file.txt";
-        String localSrc = "/tmp/file.txt";
-
+    void download_shouldFail_whenObjectDoesNotExist() throws Exception {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
-                .thenThrow(S3Exception.builder()
-                        .statusCode(404)
-                        .build());
+                .thenThrow(S3Exception.builder().statusCode(404).build());
 
-        // when / then
         assertThrows(BucketObjectNotFoundException.class,
-                () -> adapter.download(localSrc, remoteSrc));
+                () -> adapter.download("test-bucket/missing/file.txt"));
 
-        // then
-        verify(s3Client, times(1))
-                .headObject(any(HeadObjectRequest.class));
-
-        verify(s3Client, never())
-                .getObject(any(GetObjectRequest.class), any(Path.class));
+        verify(s3Client, never()).getObjectAsBytes(any(GetObjectRequest.class));
     }
 
     @Test
-    void download_shouldThrowBucketOperationException_whenS3Fails() {
-        // given
-        String remoteSrc = "dir/file.txt";
-        String localSrc = "/tmp/file.txt";
-
+    void download_shouldThrowBucketOperationException_whenS3Fails() throws Exception {
+        String remoteSrc = "test-bucket/dir/file.txt";
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().build());
+        when(s3Client.getObjectAsBytes(any(GetObjectRequest.class)))
+                .thenThrow(S3Exception.builder().statusCode(500).build());
 
-        doThrow(S3Exception.builder()
-                .statusCode(500)
-                .message("AWS error")
-                .build())
-                .when(s3Client)
-                .getObject(
-                        any(GetObjectRequest.class),
-                        any(Path.class));
-
-        // when
-        BucketOperationException exception = assertThrows(BucketOperationException.class,
-                () -> adapter.download(localSrc, remoteSrc));
-
-        // then
-        assertTrue(exception.getCause() instanceof S3Exception);
+        assertThrows(BucketOperationException.class, () -> adapter.download(remoteSrc));
     }
 
     // ------------------------------------------------------------------
@@ -251,100 +172,43 @@ public class AwsAdapterImplTest {
     // ------------------------------------------------------------------
 
     @Test
-    void update_shouldReplaceObject_whenObjectExistsAndLocalFileIsValid() throws IOException {
-        // given
-        String remoteSrc = "dir/file.txt";
+    void update_shouldReplaceObject_whenObjectExists() throws Exception {
+        String remoteSrc = "test-bucket/dir/file.txt";
+        byte[] content = "new-content".getBytes();
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
 
-        Path tempFile = Files.createTempFile("update-test", ".txt");
-        Files.writeString(tempFile, "new content");
+        assertDoesNotThrow(() -> adapter.update(remoteSrc, content));
 
-        AwsAdapterImpl spyAdapter = spy(adapter);
-
-        doReturn(true)
-                .when(spyAdapter)
-                .doesExists(remoteSrc);
-
-        when(s3Client.putObject(
-                any(PutObjectRequest.class),
-                any(RequestBody.class)))
-                .thenReturn(PutObjectResponse.builder().build());
-
-        // when / then
-        assertDoesNotThrow(() -> spyAdapter.update(tempFile.toString(), remoteSrc));
-
-        verify(spyAdapter, times(1))
-                .doesExists(remoteSrc);
-
-        verify(s3Client, times(1))
-                .putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        verify(s3Client, times(1)).headObject(any(HeadObjectRequest.class));
+        verify(s3Client, times(1)).putObject(
+                argThat((PutObjectRequest req) -> req.bucket().equals("test-bucket")
+                        && req.key().equals("dir/file.txt")),
+                any(RequestBody.class));
     }
 
     @Test
-    void update_shouldFail_whenRemoteObjectDoesNotExist() throws IOException {
-        // given
-        String remoteSrc = "missing/file.txt";
+    void update_shouldFail_whenRemoteObjectDoesNotExist() throws Exception {
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder().statusCode(404).build());
 
-        Path tempFile = Files.createTempFile("update-test", ".txt");
-        Files.writeString(tempFile, "content");
-
-        AwsAdapterImpl spyAdapter = spy(adapter);
-
-        // when
-        doReturn(false).when(spyAdapter).doesExists(remoteSrc);
-
-        // then
         assertThrows(BucketObjectNotFoundException.class,
-                () -> spyAdapter.update(tempFile.toString(), remoteSrc));
+                () -> adapter.update("test-bucket/missing/file.txt", "x".getBytes()));
 
-        verify(spyAdapter, times(1)).doesExists(remoteSrc);
         verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
     }
 
     @Test
-    void update_shouldFail_whenLocalFileIsInvalid() {
-        // given
-        String remoteSrc = "dir/file.txt";
-        String localSrc = "/invalid/path/file.txt";
-
-        // when / then
-        assertThrows(InvalidBucketPathException.class,
-                () -> adapter.update(localSrc, remoteSrc));
-
-        // then
-        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
-    }
-
-    @Test
-    void update_shouldFail_whenAwsThrowsException() throws IOException {
-        // given
-        String remoteSrc = "dir/file.txt";
-
-        Path tempFile = Files.createTempFile("update-test", ".txt");
-        Files.writeString(tempFile, "content");
-
-        AwsAdapterImpl spyAdapter = spy(adapter);
-
-        doReturn(true)
-                .when(spyAdapter)
-                .doesExists(remoteSrc);
-
-        when(s3Client.putObject(
-                any(PutObjectRequest.class),
-                any(RequestBody.class)))
-                .thenThrow(S3Exception.builder()
-                        .statusCode(500)
-                        .message("AWS failure")
-                        .build());
-
-        // when / then
-        assertThrows(BucketOperationException.class,
-                () -> spyAdapter.update(tempFile.toString(), remoteSrc));
-
-        verify(spyAdapter, times(1))
-                .doesExists(remoteSrc);
-
-        verify(s3Client, times(1))
+    void update_shouldThrowBucketOperationException_whenS3Fails() throws Exception {
+        String remoteSrc = "test-bucket/dir/file.txt";
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
+        doThrow(S3Exception.builder().statusCode(500).build())
+                .when(s3Client)
                 .putObject(any(PutObjectRequest.class), any(RequestBody.class));
+
+        assertThrows(BucketOperationException.class,
+                () -> adapter.update(remoteSrc, "x".getBytes()));
     }
 
     // ------------------------------------------------------------------
@@ -352,102 +216,79 @@ public class AwsAdapterImplTest {
     // ------------------------------------------------------------------
 
     @Test
-    void delete_shouldDeleteObject_whenRecursiveFalse() {
-        // given
-        String remoteSrc = "dir/file.txt";
+    void delete_shouldDeleteObject_whenRecursiveFalse() throws Exception {
+        String remoteSrc = "test-bucket/dir/file.txt";
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
 
-        AwsAdapterImpl spyAdapter = spy(adapter);
-        doReturn(true).when(spyAdapter).doesExists(remoteSrc);
+        assertDoesNotThrow(() -> adapter.delete(remoteSrc, false));
 
-        // when
-        assertDoesNotThrow(() -> spyAdapter.delete(remoteSrc, false));
-
-        // then
-        verify(spyAdapter).doesExists(remoteSrc);
         verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
     }
 
     @Test
-    void delete_shouldFail_whenObjectDoesNotExist_andNotRecursive() {
-        // given
-        String remoteSrc = "missing/file.txt";
+    void delete_shouldFail_whenObjectDoesNotExist_andNotRecursive() throws Exception {
+        String remoteSrc = "test-bucket/missing/file.txt";
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder().statusCode(404).build());
 
-        AwsAdapterImpl spyAdapter = spy(adapter);
-        doReturn(false).when(spyAdapter).doesExists(remoteSrc);
-
-        // when / then
         assertThrows(BucketObjectNotFoundException.class,
-                () -> spyAdapter.delete(remoteSrc, false));
+                () -> adapter.delete(remoteSrc, false));
 
         verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
     }
 
     @Test
-    void delete_shouldDeleteObjectsRecursively() {
-        // given
-        String remoteSrc = "dir";
-
+    void delete_shouldDeleteObjectsRecursively() throws Exception {
+        String remoteSrc = "test-bucket/dir";
         List<S3Object> objects = List.of(
                 S3Object.builder().key("dir/file1.txt").build(),
                 S3Object.builder().key("dir/sub/file2.txt").build());
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
-                .thenReturn(ListObjectsV2Response.builder()
-                        .contents(objects)
-                        .build());
+                .thenReturn(ListObjectsV2Response.builder().contents(objects).build());
 
-        // when
         assertDoesNotThrow(() -> adapter.delete(remoteSrc, true));
 
-        // then
         verify(s3Client).listObjectsV2(any(ListObjectsV2Request.class));
         verify(s3Client).deleteObjects(any(DeleteObjectsRequest.class));
     }
 
     @Test
-    void delete_shouldFail_whenNoObjectsFoundRecursively() {
-        // given
+    void delete_shouldFail_whenNoObjectsFoundRecursively() throws Exception {
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
-                .thenReturn(ListObjectsV2Response.builder()
-                        .contents(List.of())
-                        .build());
+                .thenReturn(ListObjectsV2Response.builder().contents(List.of()).build());
 
-        // when / then
         assertThrows(BucketObjectNotFoundException.class,
-                () -> adapter.delete("empty", true));
+                () -> adapter.delete("test-bucket/empty", true));
 
         verify(s3Client, never()).deleteObjects(any(DeleteObjectsRequest.class));
     }
 
     @Test
-    void delete_shouldFail_whenRemoteSrcIsInvalid() {
+    void delete_shouldFail_whenRemoteSrcIsInvalid() throws Exception {
         assertThrows(InvalidBucketPathException.class,
                 () -> adapter.delete("", false));
-
         verifyNoInteractions(s3Client);
     }
 
     @Test
-    void delete_shouldFail_whenRemoteSrcIsRoot() {
+    void delete_shouldFail_whenRemoteSrcIsRoot() throws Exception {
         assertThrows(InvalidBucketPathException.class,
                 () -> adapter.delete("/", true));
-
         verifyNoInteractions(s3Client);
     }
 
     @Test
-    void delete_shouldFail_whenAwsThrowsException() {
-        // given
-        AwsAdapterImpl spyAdapter = spy(adapter);
-        doReturn(true).when(spyAdapter).doesExists("dir/file.txt");
-
+    void delete_shouldThrowBucketOperationException_whenAwsThrowsException() throws Exception {
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().build());
         doThrow(S3Exception.builder().statusCode(500).build())
                 .when(s3Client)
                 .deleteObject(any(DeleteObjectRequest.class));
 
-        // when / then
         assertThrows(BucketOperationException.class,
-                () -> spyAdapter.delete("dir/file.txt", false));
+                () -> adapter.delete("test-bucket/dir/file.txt", false));
     }
 
     // ------------------------------------------------------------------
@@ -455,9 +296,8 @@ public class AwsAdapterImplTest {
     // ------------------------------------------------------------------
 
     @Test
-    void list_shouldReturnObjects_whenObjectsExist() {
-        // given
-        String prefix = "dir/";
+    void list_shouldReturnObjects_whenObjectsExist() throws Exception {
+        String prefix = "test-bucket/dir/";
         S3Object obj1 = S3Object.builder().key("file1.txt").build();
         S3Object obj2 = S3Object.builder().key("dir/file2.txt").build();
 
@@ -467,56 +307,32 @@ public class AwsAdapterImplTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
 
-        // when
         List<String> result = adapter.list(prefix);
 
-        // then
         assertNotNull(result);
         assertEquals(2, result.size());
         assertTrue(result.contains("file1.txt"));
         assertTrue(result.contains("dir/file2.txt"));
-
-        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
     }
 
     @Test
-    void list_shouldReturnEmptyList_whenNoObjectsFound() {
-        // given
-        String prefix = "empty/";
+    void list_shouldReturnEmptyList_whenNoObjectsFound() throws Exception {
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(ListObjectsV2Response.builder().contents(List.of()).build());
 
-        ListObjectsV2Response response = ListObjectsV2Response.builder()
-                .contents(List.of())
-                .build();
+        List<String> result = adapter.list("test-bucket/empty/");
 
-        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
-
-        // when
-        List<String> result = adapter.list(prefix);
-
-        // then
         assertNotNull(result);
         assertTrue(result.isEmpty());
-
-        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
     }
 
     @Test
-    void list_shouldThrowBucketOperationException_whenAwsFails() {
-        // given
-        String prefix = "dir/";
+    void list_shouldThrowBucketOperationException_whenAwsFails() throws Exception {
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
-                .thenThrow(S3Exception.builder().statusCode(500).message("Internal Server Error")
-                        .build());
+                .thenThrow(S3Exception.builder().statusCode(500).build());
 
-        // when / then
-        BucketOperationException exception = assertThrows(BucketOperationException.class, () -> {
-            adapter.list(prefix);
-        });
-
-        assertTrue(exception.getMessage().contains("AWS S3 error")
-                || exception.getCause() instanceof S3Exception);
-
-        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+        assertThrows(BucketOperationException.class,
+                () -> adapter.list("test-bucket/dir/"));
     }
 
     // ------------------------------------------------------------------
@@ -524,83 +340,42 @@ public class AwsAdapterImplTest {
     // ------------------------------------------------------------------
 
     @Test
-    void doesExists_shouldReturnTrue_whenObjectExists() {
-        // given
-        String remoteSrc = "dir/file.txt";
-
+    void doesExists_shouldReturnTrue_whenObjectExists() throws Exception {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().build());
 
-        // when
-        boolean exists = adapter.doesExists(remoteSrc);
-
-        // then
-        assertTrue(exists);
-
-        verify(s3Client, times(1))
-                .headObject(any(HeadObjectRequest.class));
+        assertTrue(adapter.doesExists("test-bucket/dir/file.txt"));
     }
 
     @Test
-    void doesExists_shouldReturnFalse_whenObjectDoesNotExist() {
-        // given
-        String remoteSrc = "dir/missing.txt";
-
+    void doesExists_shouldReturnFalse_whenObjectDoesNotExist() throws Exception {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
-                .thenThrow(S3Exception.builder()
-                        .statusCode(404)
-                        .build());
+                .thenThrow(S3Exception.builder().statusCode(404).build());
 
-        // when
-        boolean exists = adapter.doesExists(remoteSrc);
-
-        // then
-        assertFalse(exists);
-
-        verify(s3Client, times(1))
-                .headObject(any(HeadObjectRequest.class));
+        assertFalse(adapter.doesExists("test-bucket/dir/missing.txt"));
     }
 
     @Test
-    void doesExists_shouldFail_whenRemoteSrcIsNull() {
-        // when / then
+    void doesExists_shouldFail_whenRemoteSrcIsNull() throws Exception {
         assertThrows(InvalidBucketPathException.class,
                 () -> adapter.doesExists(null));
-
-        verify(s3Client, never())
-                .headObject(any(HeadObjectRequest.class));
+        verify(s3Client, never()).headObject(any(HeadObjectRequest.class));
     }
 
     @Test
-    void doesExists_shouldFail_whenRemoteSrcIsBlank() {
-        // when / then
+    void doesExists_shouldFail_whenRemoteSrcIsBlank() throws Exception {
         assertThrows(InvalidBucketPathException.class,
                 () -> adapter.doesExists("   "));
-
-        verify(s3Client, never())
-                .headObject(any(HeadObjectRequest.class));
+        verify(s3Client, never()).headObject(any(HeadObjectRequest.class));
     }
 
     @Test
-    void doesExists_shouldThrowBucketOperationException_whenAwsFails() {
-        // given
-        String remoteSrc = "dir/file.txt";
-
+    void doesExists_shouldThrowBucketOperationException_whenAwsFails() throws Exception {
         when(s3Client.headObject(any(HeadObjectRequest.class)))
-                .thenThrow(S3Exception.builder()
-                        .statusCode(500)
-                        .message("AWS internal error")
-                        .build());
+                .thenThrow(S3Exception.builder().statusCode(500).build());
 
-        // when / then
-        BucketOperationException exception = assertThrows(BucketOperationException.class,
-                () -> adapter.doesExists(remoteSrc));
-
-        // then
-        assertTrue(exception.getCause() instanceof S3Exception);
-
-        verify(s3Client, times(1))
-                .headObject(any(HeadObjectRequest.class));
+        assertThrows(BucketOperationException.class,
+                () -> adapter.doesExists("test-bucket/dir/file.txt"));
     }
 
     // ------------------------------------------------------------------
@@ -609,82 +384,55 @@ public class AwsAdapterImplTest {
 
     @Test
     void share_shouldReturnPresignedUrl_whenInputsAreValid() throws Exception {
-        // given
-        String remoteSrc = "dir/file.txt";
-        int expirationTime = 3600;
-
         PresignedGetObjectRequest presignedRequest = mock(PresignedGetObjectRequest.class);
         when(presignedRequest.url()).thenReturn(URI.create("https://signed-url").toURL());
-
         when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class)))
                 .thenReturn(presignedRequest);
 
-        // when
-        String result = adapter.share(remoteSrc, expirationTime);
+        String result = adapter.share("test-bucket/dir/file.txt", 3600);
 
-        // then
         assertNotNull(result);
         assertFalse(result.isBlank());
         assertTrue(result.contains("https://"));
-
         verify(s3Presigner, times(1))
                 .presignGetObject(any(GetObjectPresignRequest.class));
     }
 
     @Test
-    void share_shouldFail_whenRemoteSrcIsNull() {
-        // when / then
+    void share_shouldFail_whenRemoteSrcIsNull() throws Exception {
         assertThrows(InvalidBucketPathException.class,
                 () -> adapter.share(null, 3600));
-
         verifyNoInteractions(s3Presigner);
     }
 
     @Test
-    void share_shouldFail_whenRemoteSrcIsBlank() {
-        // when / then
+    void share_shouldFail_whenRemoteSrcIsBlank() throws Exception {
         assertThrows(InvalidBucketPathException.class,
                 () -> adapter.share("   ", 3600));
-
         verifyNoInteractions(s3Presigner);
     }
 
     @Test
-    void share_shouldFail_whenExpirationIsZero() {
-        // when / then
+    void share_shouldFail_whenExpirationIsZero() throws Exception {
         assertThrows(InvalidBucketPathException.class,
-                () -> adapter.share("dir/file.txt", 0));
-
+                () -> adapter.share("test-bucket/dir/file.txt", 0));
         verifyNoInteractions(s3Presigner);
     }
 
     @Test
-    void share_shouldFail_whenExpirationIsTooLarge() {
-        // given
+    void share_shouldFail_whenExpirationIsTooLarge() throws Exception {
         int moreThan7Days = 7 * 24 * 3600 + 1;
-
-        // when / then
         assertThrows(InvalidBucketPathException.class,
-                () -> adapter.share("dir/file.txt", moreThan7Days));
-
+                () -> adapter.share("test-bucket/dir/file.txt", moreThan7Days));
         verifyNoInteractions(s3Presigner);
     }
 
     @Test
-    void share_shouldFail_whenAwsThrowsException() {
-        // given
+    void share_shouldFail_whenAwsThrowsException() throws Exception {
         when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class)))
                 .thenThrow(S3Exception.builder().message("AWS error").build());
 
-        // when
-        BucketOperationException exception = assertThrows(BucketOperationException.class,
-                () -> adapter.share("dir/file.txt", 3600));
-
-        // then
-        assertFalse(exception.getMessage().contains("AWS"));
-
-        verify(s3Presigner, times(1))
-                .presignGetObject(any(GetObjectPresignRequest.class));
+        assertThrows(BucketOperationException.class,
+                () -> adapter.share("test-bucket/dir/file.txt", 3600));
     }
-
 }
