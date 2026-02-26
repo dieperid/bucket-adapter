@@ -6,7 +6,6 @@ package com.example.bucketadapter.adapter.impl;
 import com.example.bucketadapter.adapter.BucketAdapter;
 import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
-import com.example.bucketadapter.exception.InvalidBucketPathException;
 import com.example.bucketadapter.helper.AdapterHelper;
 
 import static com.example.bucketadapter.helper.ConfigHelper.getConfig;
@@ -26,11 +25,9 @@ import com.google.cloud.storage.StorageOptions;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.StreamSupport;
@@ -55,31 +52,23 @@ public class GcpAdapterImpl implements BucketAdapter {
     }
 
     @Override
-    public void upload(final String localSrc, final String remoteSrc) {
+    public void upload(final String remoteSrc, final byte[] content) {
         try {
             BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
-
-            File file = new File(localSrc);
-            if (!file.exists() || !file.isFile()) {
-                throw new InvalidBucketPathException(
-                        "Local file does not exist: " + localSrc);
-            }
 
             BlobId blobId = BlobId.of(bucketSrc.bucket(), bucketSrc.key());
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
 
-            storage.create(blobInfo, java.nio.file.Files.readAllBytes(file.toPath()));
+            storage.create(blobInfo, content);
 
-        } catch (InvalidBucketPathException e) {
-            throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
-                    "GCP error while uploading file to " + remoteSrc, e);
+                    "GCP error while uploading object to " + remoteSrc, e);
         }
     }
 
     @Override
-    public void download(final String localSrc, final String remoteSrc) {
+    public byte[] download(final String remoteSrc) {
         BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
 
         try {
@@ -89,20 +78,20 @@ public class GcpAdapterImpl implements BucketAdapter {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
-            blob.downloadTo(Path.of(localSrc));
+            return blob.getContent();
         } catch (BucketObjectNotFoundException e) {
             throw e;
         } catch (Exception e) {
             throw new BucketOperationException(
-                    "GCP error while downloading file from " + remoteSrc, e);
+                    "GCP error while downloading object from " + remoteSrc, e);
         }
     }
 
     @Override
-    public void update(final String localSrc, final String remoteSrc) {
+    public void update(final String remoteSrc, final byte[] content) {
         // In GCP, upload overwrites by default :
         // https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert
-        upload(localSrc, remoteSrc);
+        upload(remoteSrc, content);
     }
 
     @Override

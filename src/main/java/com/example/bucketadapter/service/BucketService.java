@@ -24,16 +24,16 @@ public class BucketService {
         this.adapter = factory.getAdapter();
     }
 
-    public void upload(String local, String remote) {
-        adapter.upload(local, remote);
+    public void upload(String remote, byte[] content) {
+        adapter.upload(remote, content);
     }
 
-    public void download(String local, String remote) {
-        adapter.download(local, remote);
+    public byte[] download(String remote) {
+        return adapter.download(remote);
     }
 
-    public void update(String local, String remote) {
-        adapter.update(local, remote);
+    public void update(String remote, byte[] content) {
+        adapter.update(remote, content);
     }
 
     public void delete(String remote, boolean recursive) {

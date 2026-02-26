@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import com.example.bucketadapter.adapter.BucketAdapter;
 import com.example.bucketadapter.exception.BucketObjectNotFoundException;
 import com.example.bucketadapter.exception.BucketOperationException;
-import com.example.bucketadapter.exception.InvalidBucketPathException;
 import com.example.bucketadapter.helper.AdapterHelper;
 
 import static com.example.bucketadapter.helper.ConfigHelper.getConfig;
@@ -27,6 +26,7 @@ import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
@@ -37,9 +37,8 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.core.ResponseBytes;
 
-import java.io.File;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -69,29 +68,23 @@ public class AwsAdapterImpl implements BucketAdapter {
     }
 
     @Override
-    public void upload(String localSrc, String remoteSrc) {
+    public void upload(String remoteSrc, byte[] content) {
         try {
             BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
-
-            File file = new File(localSrc);
-            if (!file.exists() || !file.isFile()) {
-                throw new InvalidBucketPathException(
-                        "Local file does not exist: " + localSrc);
-            }
 
             s3Client.putObject(PutObjectRequest.builder()
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
                     .build(),
-                    RequestBody.fromFile(file));
+                    RequestBody.fromBytes(content));
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while uploading file to " + remoteSrc, e);
+                    "AWS S3 error while uploading object to " + remoteSrc, e);
         }
     }
 
     @Override
-    public void download(String localSrc, String remoteSrc) {
+    public byte[] download(String remoteSrc) {
         validateRemoteSrc(remoteSrc);
 
         BucketSrc bucketSrc = AdapterHelper.extractBucketAndKey(remoteSrc);
@@ -103,26 +96,20 @@ public class AwsAdapterImpl implements BucketAdapter {
                 throw new BucketObjectNotFoundException(remoteSrc);
             }
 
-            s3Client.getObject(GetObjectRequest.builder()
+            ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(GetObjectRequest.builder()
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
-                    .build(),
-                    Paths.get(localSrc));
+                    .build());
+            return objectBytes.asByteArray();
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while downloading file from " + remoteSrc, e);
+                    "AWS S3 error while downloading object from " + remoteSrc, e);
         }
     }
 
     @Override
-    public void update(String localSrc, String remoteSrc) {
+    public void update(String remoteSrc, byte[] content) {
         try {
-            File file = new File(localSrc);
-            if (!file.exists() || !file.isFile()) {
-                throw new InvalidBucketPathException(
-                        "Local file does not exist or is not a file: " + localSrc);
-            }
-
             // Check if the object exists
             if (!doesExists(remoteSrc)) {
                 throw new BucketObjectNotFoundException(remoteSrc);
@@ -135,10 +122,10 @@ public class AwsAdapterImpl implements BucketAdapter {
                     .bucket(bucketSrc.bucket())
                     .key(bucketSrc.key())
                     .build(),
-                    RequestBody.fromFile(new File(localSrc)));
+                    RequestBody.fromBytes(content));
         } catch (S3Exception e) {
             throw new BucketOperationException(
-                    "AWS S3 error while updating file at " + remoteSrc, e);
+                    "AWS S3 error while updating object at " + remoteSrc, e);
         }
     }
 
