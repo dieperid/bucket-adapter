@@ -266,14 +266,14 @@ mvn spring-boot:run
 #### Maven build
 
 ```bash
-# Make sure Maven wrapper is executable
+# Generate the maven wrapper (only one time if the wrapper don't exists)
+mvn -N wrapper:wrapper
+
+# Make the wrapper executable
 chmod +x mvnw
 
-# Clean and compile, skip tests
-mvn clean package -DskipTests
-
-# (Optional) Run tests
-mvn test
+# Build for production (with test execution)
+./mvnw -B clean verify
 ```
 
 #### Docker build & run
@@ -331,35 +331,31 @@ curl http://localhost:8080/v3/api-docs > docs/openapi.yaml
 ├── pom.xml
 ├── README.md
 ├── setup-test-data.sh
-├── docs                                                    # Documentation folder
-└── src                                                     # Source code
+├── docs                                            # Documentation folder
+└── src                                             # Source code
     ├── main
     │   ├── java
-    │   │   └── com
-    │   │       └── example
-    │   │           └── bucketadapter
-    │   │               ├── adapter
-    │   │               │   ├── BucketAdapter.java
-    │   │               │   └── impl                        # Adapter implementation
-    │   │               ├── BucketAdapterApplication.java
-    │   │               ├── config
-    │   │               ├── controller
-    │   │               ├── exception                       # Bucket exception
-    │   │               ├── factory
-    │   │               ├── helper                          # Helpers
-    │   │               └── service
+    │   │   └── com.example.bucketadapter
+    │   │       ├── adapter
+    │   │       │   ├── BucketAdapter.java
+    │   │       │   └── impl                        # Adapter implementation
+    │   │       ├── BucketAdapterApplication.java
+    │   │       ├── config
+    │   │       ├── controller
+    │   │       ├── exception                       # Bucket exception
+    │   │       ├── factory
+    │   │       ├── helper                          # Helpers
+    │   │       └── service
     │   └── resources
     │       ├── application.properties
     │       ├── static
     │       └── templates
-    └── test                                                # Tests folder
+    └── test                                        # Tests folder
         └── java
-            └── com
-                └── example
-                    └── bucketadapter
-                        ├── adapter
-                        │   └── impl
-                        └── BucketAdapterApplicationTests.java
+            └── com.example.bucketadapter
+                ├── adapter
+                │   └── impl                        # Test folder of adapter implementation    
+                └── BucketAdapterApplicationTests.java
 ```
 
 ## Collaborate
@@ -390,7 +386,7 @@ Examples :
 ```bash
 feature/implement-aws-s3
 release/1.0.0
-hotfix/fix-servor-error-on-s3-upload
+hotfix/1.2.1 or with description hotfix/1.2.1-critical-auth-bug
 ```
 
 ## License
