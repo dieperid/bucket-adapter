@@ -1,15 +1,19 @@
-version: "3.9"
-
 services:
   bucket-adapter:
     build:
       context: .
-      dockerfile: Dockerfile
+    image: ${IMAGE_NAME:-bi-bucket-adapter:latest}
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS_CONTAINER:-/gcp-credentials.json}
+      AWS_SHARED_CREDENTIALS_FILE: ${AWS_SHARED_CREDENTIALS_FILE_CONTAINER:-/.aws/credentials}
     ports:
-      - "8080:8080"
+      - "${HOST_PORT:-8080}:${SERVER_PORT:-8080}"
     volumes:
       - ./src:/app/src
       - ./pom.xml:/app/pom.xml
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
+      - ./data:/app/data
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./gcp-credentials.json}:${GOOGLE_APPLICATION_CREDENTIALS_CONTAINER:-/gcp-credentials.json}:ro
+      - ${AWS_SHARED_CREDENTIALS_FILE:-${HOME}/.aws/credentials}:${AWS_SHARED_CREDENTIALS_FILE_CONTAINER:-/.aws/credentials}:ro
     restart: unless-stopped

@@ -1,5 +1,5 @@
 @startuml
-title BucketAdapter (Corrected)
+title BucketAdapter Class Diagram
 
 interface BucketAdapter {
     + upload(localSrc, remoteSrc)
@@ -21,6 +21,15 @@ class BucketService {
     + list(...)
 }
 
+class BucketController {
+    - bucketService: BucketService
+    + BucketController(bucketService: BucketService)
+    + upload(...)
+    + download(...)
+    + delete(...)
+    + list(...)
+}
+
 class AzureAdapterImpl
 class AwsAdapterImpl
 class GcpAdapterImpl
@@ -31,4 +40,5 @@ BucketAdapter <|.. GcpAdapterImpl
 
 BucketAdapterFactory --> BucketAdapter : <<creates>>
 BucketService --> BucketAdapter : <<depends on>>
+BucketController --> BucketService : <<depends on>>
 @enduml

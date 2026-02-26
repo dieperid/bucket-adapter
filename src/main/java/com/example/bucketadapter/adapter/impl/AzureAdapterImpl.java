@@ -3,36 +3,51 @@ package com.example.bucketadapter.adapter.impl;
 import org.springframework.stereotype.Component;
 
 import com.example.bucketadapter.adapter.BucketAdapter;
-import com.example.bucketadapter.provider.AZURESDK;
 
 import java.util.List;
 
-@Component
+@Component("AZURE")
 public class AzureAdapterImpl implements BucketAdapter {
 
-    private final AZURESDK azureSdk;
-
-    public AzureAdapterImpl(AZURESDK azureSdk) {
-        this.azureSdk = azureSdk;
+    @Override
+    public byte[] download(String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'download'");
     }
 
     @Override
-    public void upload(String localSrc, String remoteSrc) {
-        azureSdk.putObject(localSrc, remoteSrc);
-    }
-
-    @Override
-    public void download(String localSrc, String remoteSrc) {
-        azureSdk.getObject(localSrc, remoteSrc);
+    public void update(String remoteSrc, byte[] content) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
     }
 
     @Override
     public void delete(String remoteSrc, boolean recursive) {
-        azureSdk.deleteObject(remoteSrc);
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'delete'");
     }
 
     @Override
     public List<String> list(String remoteSrc) {
-        return azureSdk.listObjects(remoteSrc);
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'list'");
+    }
+
+    @Override
+    public boolean doesExists(String remoteSrc) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'doesExists'");
+    }
+
+    @Override
+    public String share(String remoteSrc, int expirationTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'share'");
+    }
+
+    @Override
+    public void upload(String remoteSrc, byte[] content) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'upload'");
     }
 }
