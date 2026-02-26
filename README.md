@@ -137,22 +137,91 @@ mvn clean
 mvn compile
 ```
 
-3. Run tests of the project
-
-```bash
-mvn test
-```
-
-4. Create JAR file
+3. Package the project to create JAR file
 
 ```bash
 mvn package
 ```
 
-5. Install the project locally
+> Result expected :
+
+```bash
+[...]
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 62, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.2:jar (default-jar) @ bucketadapter ---
+[INFO] Building jar: /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/target/bucketadapter-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.0.0:repackage (repackage) @ bucketadapter ---
+[INFO] Replacing main artifact /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/target/bucketadapter-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/target/bucketadapter-0.0.1-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.545 s
+[INFO] Finished at: 2026-02-26T09:08:11+01:00
+[INFO] ------------------------------------------------------------------------
+```
+
+4. Install the project locally
 
 ```bash
 mvn install
+```
+
+> Result of the install
+
+```bash
+[...]
+[INFO] --- checkstyle:3.3.1:check (checkstyle) @ bucketadapter ---
+[INFO] Starting audit...
+Audit done.
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] >>> spotbugs:4.9.3.2:check (spotbugs) > :spotbugs @ bucketadapter >>>
+[INFO] 
+[INFO] --- spotbugs:4.9.3.2:spotbugs (spotbugs) @ bucketadapter ---
+[INFO] Fork Value is true
+[INFO] Done SpotBugs Analysis....
+[WARNING] Unable to find a URL to the parent project. The parent menu will NOT be added.
+[INFO] Rendering content with org.apache.maven.skins:maven-fluido-skin:jar:2.0.0-M9 skin
+[INFO] 
+[INFO] <<< spotbugs:4.9.3.2:check (spotbugs) < :spotbugs @ bucketadapter <<<
+[INFO] 
+[INFO] --- spotbugs:4.9.3.2:check (spotbugs) @ bucketadapter ---
+[...]
+[INFO] 
+[INFO] --- jacoco:0.8.11:report (report) @ bucketadapter ---
+[INFO] Loading execution data file /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/target/jacoco.exec
+[INFO] Analyzed bundle 'bucketadapter' with 14 classes
+[INFO] 
+[INFO] --- jacoco:0.8.11:check (check) @ bucketadapter ---
+[INFO] Loading execution data file /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/target/jacoco.exec
+[INFO] Analyzed bundle 'bucketadapter' with 14 classes
+[INFO] All coverage checks have been met.
+[INFO] 
+[INFO] --- install:3.1.4:install (default-install) @ bucketadapter ---
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-util/1.9.22/maven-resolver-util-1.9.22.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-util/1.9.22/maven-resolver-util-1.9.22.pom (2.2 kB at 7.9 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver/1.9.22/maven-resolver-1.9.22.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver/1.9.22/maven-resolver-1.9.22.pom (23 kB at 137 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-api/1.9.22/maven-resolver-api-1.9.22.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-api/1.9.22/maven-resolver-api-1.9.22.pom (2.2 kB at 12 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-util/1.9.22/maven-resolver-util-1.9.22.jar
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-api/1.9.22/maven-resolver-api-1.9.22.jar
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-api/1.9.22/maven-resolver-api-1.9.22.jar (157 kB at 575 kB/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/resolver/maven-resolver-util/1.9.22/maven-resolver-util-1.9.22.jar (196 kB at 474 kB/s)
+[INFO] Installing /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/pom.xml to /Users/ddieperi/.m2/repository/com/example/bucketadapter/0.0.1-SNAPSHOT/bucketadapter-0.0.1-SNAPSHOT.pom
+[INFO] Installing /Users/ddieperi/Documents/git/cpnv/bi1/bucket-adapter/target/bucketadapter-0.0.1-SNAPSHOT.jar to /Users/ddieperi/.m2/repository/com/example/bucketadapter/0.0.1-SNAPSHOT/bucketadapter-0.0.1-SNAPSHOT.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  6.641 s
+[INFO] Finished at: 2026-02-26T09:18:09+01:00
+[INFO] ------------------------------------------------------------------------
 ```
 
 #### Run tests
