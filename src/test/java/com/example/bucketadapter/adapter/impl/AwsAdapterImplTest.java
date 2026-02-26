@@ -70,19 +70,24 @@ public class AwsAdapterImplTest {
 
     private AutoCloseable closeable;
 
-    private Path tempFile;
+    private static Path tempFile;
 
-    private Path tempDirectory;
+    private static Path tempDirectory;
 
     Supplier<S3Presigner> presignerSupplier = () -> s3Presigner;
 
     @BeforeAll
-    static void beforeAll() {
+    static void beforeAll() throws IOException {
         System.setProperty("SHARE_LINK_MAX_EXPIRATION_TIME", "604800");
+        tempFile = Files.createTempFile("upload-test-", ".txt");
+        Files.writeString(tempFile, "test content");
+        tempDirectory = Files.createTempDirectory("upload-dir-");
     }
 
     @AfterAll
-    static void tearDownAfterAll() {
+    static void tearDownAfterAll() throws IOException {
+        Files.deleteIfExists(tempFile);
+        Files.deleteIfExists(tempDirectory);
         System.clearProperty("SHARE_LINK_MAX_EXPIRATION_TIME");
     }
 
@@ -90,17 +95,10 @@ public class AwsAdapterImplTest {
     void setUp() throws IOException {
         closeable = MockitoAnnotations.openMocks(this);
         adapter = new AwsAdapterImpl(s3Client, presignerSupplier);
-
-        tempFile = Files.createTempFile("upload-test-", ".txt");
-        Files.writeString(tempFile, "test content");
-
-        tempDirectory = Files.createTempDirectory("upload-dir-");
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        Files.deleteIfExists(tempFile);
-        Files.deleteIfExists(tempDirectory);
         closeable.close();
     }
 
