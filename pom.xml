@@ -29,7 +29,8 @@
 	<properties>
 		<java.version>21</java.version>
         <aws.java.sdk.version>2.39.5</aws.java.sdk.version>
-        <openapi.docs.url>http://localhost:8080/v3/api-docs</openapi.docs.url>
+        <server.port>8080</server.port>
+        <openapi.docs.url>http://localhost:${server.port}/v3/api-docs</openapi.docs.url>
 	</properties>
 
     <dependencyManagement>
