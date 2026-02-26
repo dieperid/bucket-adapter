@@ -21,6 +21,7 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;

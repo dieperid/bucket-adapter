@@ -40,6 +40,7 @@ import com.example.bucketadapter.exception.BucketOperationException;
 import com.example.bucketadapter.exception.InvalidBucketPathException;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 
